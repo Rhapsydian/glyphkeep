@@ -7,7 +7,8 @@
 // enabled - add/remove plugins here by hand, or via that tool.
 import { loadPlugins } from '@glyphrogue/core';
 import starterPlugin from './src/plugins/starter-plugin/index.js';
+import floorPlugin from './src/plugins/floor-plugin/index.js';
 
 export function registerPlugins(api) {
-  loadPlugins(api, [starterPlugin]);
+  loadPlugins(api, [starterPlugin, floorPlugin]);
 }

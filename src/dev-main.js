@@ -3,16 +3,18 @@ import { createApi, createLocalStorageBackend } from '@glyphrogue/core';
 import { mountEditor } from '@glyphrogue/editor';
 import { snapshotWorld, restoreWorldFromSnapshot } from '@glyphrogue/editor/hotReload';
 import { registerPlugins } from '../bootstrap.js';
-import { instantiateZoneContent, createRenderer, isWalkableInZone, isOpaqueInZone } from './game.js';
+import { createRenderer, isWalkableInZone, isOpaqueInZone } from './game.js';
 import { registerMoveRule } from './rules.js';
 import { wireKeyboardInput } from './input.js';
-import starterRoom from './maps/templates/starter-room.json';
+import { createFloorState } from './floor.js';
+import { showWinScreen } from './screens.js';
 
-// Phase 1 checkpoint 1: a single fixed zone. See main.js for the same note.
-const zone = starterRoom;
+// floor is assigned below, after api exists - see main.js for why this is
+// safe despite isWalkable/isOpaque being handed to createApi() first.
+let floor;
 const mapQuery = {
-  isWalkable: (x, y) => isWalkableInZone(zone, x, y),
-  isOpaque: (x, y) => isOpaqueInZone(zone, x, y),
+  isWalkable: (x, y) => isWalkableInZone(floor.getZone(), x, y),
+  isOpaque: (x, y) => isOpaqueInZone(floor.getZone(), x, y),
 };
 
 // sessionStorage, not localStorage: this snapshot only needs to bridge a
@@ -33,11 +35,28 @@ const api = restored ?? createApi(mapQuery);
 registerPlugins(api);
 registerMoveRule(api);
 
-// Only seed the starter content on a genuine cold start - a restored api
-// already has it (and whatever got mutated before the last HMR update).
+// floor.js's own currentFloor/zone bookkeeping is plain JS-closure state,
+// not part of the save DTO's game slice (this harness doesn't wire
+// serializeGame/deserializeGame at all) - so a restore always resumes
+// floor-sequencing at floor 1, deliberately, rather than half-tracking it.
+// clearFloorOwnedEntities is tag-based specifically so this is safe even
+// when the restored world still has a later floor's stairs/entities in it
+// from before the reload - they get swept up and replaced, not duplicated.
+floor = createFloorState(api);
+
+// Only create the player on a genuine cold start - a restored api already
+// has one (and whatever else got mutated before the last HMR update).
+// Position always gets reset to floor 1's entry either way, per the note
+// above.
 const player = restored
   ? api.query(['Position', 'PlayerControlled'])[0]
-  : instantiateZoneContent(api, zone);
+  : (() => {
+      const entity = api.createEntity();
+      api.addComponent(entity, 'PlayerControlled', {});
+      api.addActor(entity, 0);
+      return entity;
+    })();
+floor.placePlayerAtEntry(player);
 
 const renderer = createRenderer(document.getElementById('game'));
 
@@ -48,13 +67,21 @@ const renderer = createRenderer(document.getElementById('game'));
 // was already due (none, in practice - a snapshot only ever happens while
 // already locked waiting for the player) and re-locks the same way.
 api.run();
-renderer.render(api, player, zone);
+renderer.render(api, player, floor.getZone());
 
 const keyboardSource = wireKeyboardInput({
   target: window,
   api,
   player,
-  onMove: () => renderer.render(api, player, zone),
+  onMove: () => {
+    const outcome = floor.checkForDescent(player);
+    if (outcome === 'won') {
+      showWinScreen(document.getElementById('game'));
+      return;
+    }
+    if (outcome === 'descended') renderer.resetZone();
+    renderer.render(api, player, floor.getZone());
+  },
 });
 
 const editorInstance = mountEditor(document.getElementById('editor-root'), api);

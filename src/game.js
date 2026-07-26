@@ -28,9 +28,16 @@ import { createStarterFontSources, STARTER_FONT_ID, STARTER_FONT_CSS_FAMILY } fr
 
 const ENTITY_SYMBOL = 'entity';
 const PLAYER_SYMBOL = 'player';
+const STAIRS_SYMBOL = 'stairs';
 const SIGHT_RADIUS = 8;
 const VIEWPORT_WIDTH = 15;
 const VIEWPORT_HEIGHT = 11;
+
+// EntityType.type -> tileset symbol, defaulting to the generic ENTITY_SYMBOL
+// for anything without its own dedicated look (torch, future enemies).
+const ENTITY_SYMBOLS = {
+  stairs: STAIRS_SYMBOL,
+};
 
 export function cellAt(zone, x, y) {
   if (x < 0 || y < 0 || x >= zone.width || y >= zone.height) return undefined;
@@ -68,6 +75,7 @@ function buildTileset() {
   registerSymbol(tileset, 'floor', { fontFace: STARTER_FONT_ID, codepoint: '20', background: { token: 'floor' } });
   registerSymbol(tileset, ENTITY_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '40', foreground: { token: 'entity' } });
   registerSymbol(tileset, PLAYER_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '40', foreground: { token: 'player' } });
+  registerSymbol(tileset, STAIRS_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '3e', foreground: { token: 'stairs' } });
   return tileset;
 }
 
@@ -77,28 +85,9 @@ export function buildPalette() {
     floor: '#222222',
     entity: '#e0a030',
     player: '#e0e0e0',
+    stairs: '#40c0c0',
     remembered: '#333333',
   });
-}
-
-// zone.entities/zone.anchors are inert blueprint data (docs/data-model.md),
-// not live entities, until something actually instantiates them - this is
-// that step, called once whenever a zone (the starter room today, a
-// generated floor from checkpoint 3 on) is entered fresh.
-export function instantiateZoneContent(api, zone) {
-  for (const entity of zone.entities) {
-    api.instantiateEntity(entity.type, { Position: { x: entity.x, y: entity.y } });
-  }
-
-  const playerStart = zone.anchors.find((anchor) => anchor.id === 'player-start');
-  const player = api.createEntity();
-  api.addComponent(player, 'Position', { x: playerStart.x, y: playerStart.y });
-  api.addComponent(player, 'PlayerControlled', {});
-  // Without this, the scheduler's next()/act() never selects the player at
-  // all (it only ever iterates registered actors) - api.run() would loop
-  // forever instead of locking to wait for input.
-  api.addActor(player, 0);
-  return player;
 }
 
 function buildEntityCommands(api, tileset, fontSources, metrics, fov) {
@@ -112,7 +101,9 @@ function buildEntityCommands(api, tileset, fontSources, metrics, fov) {
   for (const entity of api.query(['Position', 'EntityType'])) {
     const position = api.getComponent(entity, 'Position');
     if (!fovContains(fov, position.x, position.y)) continue;
-    entities.push({ entity, position, ...resolveSymbol(tileset, fontSources, metrics, ENTITY_SYMBOL) });
+    const { type } = api.getComponent(entity, 'EntityType');
+    const symbol = ENTITY_SYMBOLS[type] ?? ENTITY_SYMBOL;
+    entities.push({ entity, position, ...resolveSymbol(tileset, fontSources, metrics, symbol) });
   }
 
   return entities;

@@ -35,13 +35,22 @@ back to real semver ranges at the next natural publish checkpoint.
 ## Project layout
 
 - `src/maps/templates/` — hand-placed static rooms and generator-composed
-  templates. `starter-room.json` is Phase 1's placeholder single zone
-  (checkpoint 3 replaces it with real per-floor BSP generation).
+  templates. `starter-room.json` is the scaffold's original fixture, kept
+  as a reference example (no longer part of the live boot path since
+  checkpoint 3 — floors 1-10 are real per-run BSP generation now).
+- `src/generators/` — glyphkeep-authored `registerGenerator`-shaped
+  functions (`floorGenerator.js`'s BSP-plus-stairs floor generator).
 - `src/plugins/<pluginId>/` — one folder per plugin (entity types, rules,
   generators). `bootstrap.js` at the project root lists which plugins are
   active.
-- `src/game.js` — the live camera/FOV/render loop (checkpoint 1) tying
-  ECS world state to the drawn canvas.
+- `src/game.js` — the live camera/FOV/render loop tying ECS world state to
+  the drawn canvas.
+- `src/rules.js` — glyphkeep-authored action rules (`Move`'s bump-to-attack
+  resolution; no first-party rule for this exists in `glyphrogue`).
+- `src/floor.js` — floor-sequencing state (current floor, descent) —
+  `glyphrogue` has no "current zone" concept, so this is entirely
+  game-owned.
+- `src/input.js` — keyboard-to-movement wiring via `@glyphrogue/input`.
 - `assets/fonts/` — font sources for the game's glyph tileset.
 
 ## Deploy

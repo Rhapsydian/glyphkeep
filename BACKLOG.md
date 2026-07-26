@@ -26,9 +26,10 @@ Dependency-ordered, from `DESIGN.md`'s "Implementation phasing" section.
 Check items off here as they land, same convention `glyphrogue` itself
 uses.
 
-1. **Scaffold + core loop** — in progress (checkpoints 1-2 of 4 landed:
+1. **Scaffold + core loop** — in progress (checkpoints 1-3 of 4 landed:
    scaffold merge + live camera/FOV render loop; keyboard input wired to
-   movement via a glyphkeep-authored `Move` rule).
+   movement via a glyphkeep-authored `Move` rule; BSP floors 1-10 with a
+   stairs-triggered descent and a placeholder win screen on floor 10).
 2. **Full bestiary + boss** — not started.
 3. **Equipment & inventory** — not started.
 4. **Meta-progression & persistence** — not started. *(Core game complete
@@ -90,3 +91,19 @@ uses.
   `glyphrogue` (two-line export addition), with a new
   `packages/core/test/index.test.js` regression test guarding the public
   surface.
+- **`runConnectivityPass`/`ensureTraversable`/`stampTemplate` (`zoneComposition.js`)
+  aren't exported from `index.js`** (found checkpoint 3, writing
+  glyphkeep's own BSP floor generator to get at `carveBsp`'s `rooms` list
+  for stairs placement — the stock `bspGenerator` discards it).
+  `carveBsp`/`createZone`/`carveCellularAutomata`/`connectCorridor`/
+  `nearestOpenCell` are already exported "for authoring tools... that call
+  several of these directly" (index.js's own comment), but
+  `runConnectivityPass` — the "mandatory post-generation pass"
+  (`zoneComposition.js`'s own doc comment) every stock generator calls
+  internally — isn't in that same set, so a custom generator has no way to
+  reuse it. **Not fixed this session**: a pure BSP-only floor with no
+  stamps doesn't actually need it (`carveBsp`'s connect-on-merge already
+  guarantees full connectivity on its own, per its doc comment), so nothing
+  in Phase 1 is blocked. Will genuinely block Phase 5 (stamped event
+  rooms — shops/shrines/cursed rooms/vaults — which do need the mandatory
+  pass to guarantee a stamp isn't isolated) — revisit then.

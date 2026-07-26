@@ -9,13 +9,16 @@ function findAnchor(zone, id) {
   return zone.anchors.find((anchor) => anchor.id === id);
 }
 
-// Entity types a generated floor itself owns (stairs today, enemies from
-// checkpoint 4) - never the player. Destroying by this tag rather than a
-// locally-tracked id list is what makes generateCurrentFloor self-healing
-// against dev-main.js's HMR restore path, where floor.js's own JS-closure
-// state doesn't survive the reload but the restored ECS world's entities
-// do (see dev-main.js's own note on this).
-const FLOOR_OWNED_ENTITY_TYPES = new Set(['stairs']);
+// Entity types a generated floor itself owns (stairs, wanderers) - never
+// the player. Destroying by this tag rather than a locally-tracked id list
+// is what makes generateCurrentFloor self-healing against dev-main.js's
+// HMR restore path, where floor.js's own JS-closure state doesn't survive
+// the reload but the restored ECS world's entities do (see dev-main.js's
+// own note on this).
+const FLOOR_OWNED_ENTITY_TYPES = new Set(['stairs', 'wanderer']);
+
+// Entity types that need a scheduler turn, not just a Position on the map.
+const ACTOR_ENTITY_TYPES = new Set(['wanderer']);
 
 export function createFloorState(api) {
   let currentFloor = 1;
@@ -24,7 +27,13 @@ export function createFloorState(api) {
   function clearFloorOwnedEntities() {
     for (const entity of api.query(['EntityType'])) {
       const { type } = api.getComponent(entity, 'EntityType');
-      if (FLOOR_OWNED_ENTITY_TYPES.has(type)) api.destroyEntity(entity);
+      if (!FLOOR_OWNED_ENTITY_TYPES.has(type)) continue;
+      // destroyEntity only touches world state, never scheduler.actors - an
+      // actor destroyed without removeActor first leaves a ghost entry that
+      // next() keeps selecting forever, wasting a turn slot with no entity
+      // behind it to ever unlock the scheduler again.
+      api.removeActor(entity);
+      api.destroyEntity(entity);
     }
   }
 
@@ -33,7 +42,8 @@ export function createFloorState(api) {
 
     zone = api.generateZone({ generatorId: 'glyphkeep-floor', zoneId: `floor-${currentFloor}` });
     for (const blueprint of zone.entities) {
-      api.instantiateEntity(blueprint.type, { Position: { x: blueprint.x, y: blueprint.y } });
+      const entity = api.instantiateEntity(blueprint.type, { Position: { x: blueprint.x, y: blueprint.y } });
+      if (ACTOR_ENTITY_TYPES.has(blueprint.type)) api.addActor(entity, 0);
     }
   }
 

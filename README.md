@@ -9,9 +9,12 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 
 ## Status
 
-Implementation underway — Phase 1 ("scaffold + core loop") in progress, see
-[`BACKLOG.md`](BACKLOG.md) for the phased build plan and current NEXT
-SESSION pointer.
+Phase 1 ("scaffold + core loop") is complete — floors 1-10 generate for
+real (BSP), the player moves and fights with real keyboard input, one
+enemy type (`Wanders`) populates every floor, and reaching floor 10 (or
+dying) shows a placeholder end screen. See [`BACKLOG.md`](BACKLOG.md) for
+the phased build plan and current NEXT SESSION pointer (Phase 2: full
+bestiary + boss).
 
 ## Getting started
 
@@ -45,12 +48,14 @@ back to real semver ranges at the next natural publish checkpoint.
   active.
 - `src/game.js` — the live camera/FOV/render loop tying ECS world state to
   the drawn canvas.
-- `src/rules.js` — glyphkeep-authored action rules (`Move`'s bump-to-attack
-  resolution; no first-party rule for this exists in `glyphrogue`).
+- `src/rules.js` — glyphkeep-authored action rules: `Move` (bump-to-attack
+  resolution), `Attack` (accuracy/damage rolls), `Die`. No first-party
+  rule for any of these exists in `glyphrogue`.
 - `src/floor.js` — floor-sequencing state (current floor, descent) —
   `glyphrogue` has no "current zone" concept, so this is entirely
   game-owned.
 - `src/input.js` — keyboard-to-movement wiring via `@glyphrogue/input`.
+- `src/screens.js` — placeholder win/death overlays.
 - `assets/fonts/` — font sources for the game's glyph tileset.
 
 ## Deploy

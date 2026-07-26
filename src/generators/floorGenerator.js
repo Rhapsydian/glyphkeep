@@ -38,5 +38,13 @@ export function floorGeneratorFn(ctx) {
   zone.anchors.push({ id: 'stairs', x: stairsRoom.center.x, y: stairsRoom.center.y });
   zone.entities.push({ type: 'stairs', x: stairsRoom.center.x, y: stairsRoom.center.y });
 
+  // One Wanders enemy per remaining room (DESIGN.md Phase 1: "one enemy
+  // (Wanders) to prove combat works") - every room except the ones already
+  // claimed by the entry and the stairs.
+  for (const room of rooms) {
+    if (room === stairsRoom || room.center === entryPoint) continue;
+    zone.entities.push({ type: 'wanderer', x: room.center.x, y: room.center.y });
+  }
+
   return zone;
 }

@@ -49,3 +49,17 @@ test('different floor ids produce different layouts', () => {
 
   assert.notDeepEqual(floorOne.cells, floorTwo.cells);
 });
+
+test('wanderer enemies are placed on real floor cells, never on the entry or stairs cells', () => {
+  const zone = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-1' });
+  const entry = zone.anchors.find((anchor) => anchor.id === 'entry');
+  const stairs = zone.anchors.find((anchor) => anchor.id === 'stairs');
+  const wanderers = zone.entities.filter((entity) => entity.type === 'wanderer');
+
+  assert.ok(wanderers.length > 0);
+  for (const wanderer of wanderers) {
+    assert.equal(zone.cells[wanderer.y * zone.width + wanderer.x], 'floor');
+    assert.notDeepEqual({ x: wanderer.x, y: wanderer.y }, { x: entry.x, y: entry.y });
+    assert.notDeepEqual({ x: wanderer.x, y: wanderer.y }, { x: stairs.x, y: stairs.y });
+  }
+});

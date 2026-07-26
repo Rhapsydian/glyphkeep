@@ -1,13 +1,20 @@
 import { unmount } from 'svelte';
-import { createApi, createLocalStorageBackend } from '@glyphrogue/core';
+import { createApi, createRng, createLocalStorageBackend } from '@glyphrogue/core';
 import { mountEditor } from '@glyphrogue/editor';
 import { snapshotWorld, restoreWorldFromSnapshot } from '@glyphrogue/editor/hotReload';
 import { registerPlugins } from '../bootstrap.js';
 import { createRenderer, isWalkableInZone, isOpaqueInZone } from './game.js';
-import { registerMoveRule } from './rules.js';
+import {
+  registerMoveRule,
+  registerAttackRule,
+  registerDieRule,
+  PLAYER_HEALTH,
+  PLAYER_ATTACK,
+  PLAYER_DEFENSE,
+} from './rules.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
-import { showWinScreen } from './screens.js';
+import { showWinScreen, showDeathScreen } from './screens.js';
 
 // floor is assigned below, after api exists - see main.js for why this is
 // safe despite isWalkable/isOpaque being handed to createApi() first.
@@ -34,6 +41,12 @@ const api = restored ?? createApi(mapQuery);
 // round-tripped world data, so this has to run every time, restored or not.
 registerPlugins(api);
 registerMoveRule(api);
+// A rule's ctx has no rng access (BACKLOG.md's cross-project section) -
+// combatRng is glyphkeep's own stream, seeded from the world's own seed so
+// it's still deterministic per run, just not literally api.rng itself.
+const combatRng = createRng(api.rng.state);
+registerAttackRule(api, combatRng);
+registerDieRule(api);
 
 // floor.js's own currentFloor/zone bookkeeping is plain JS-closure state,
 // not part of the save DTO's game slice (this harness doesn't wire
@@ -44,15 +57,18 @@ registerMoveRule(api);
 // from before the reload - they get swept up and replaced, not duplicated.
 floor = createFloorState(api);
 
-// Only create the player on a genuine cold start - a restored api already
-// has one (and whatever else got mutated before the last HMR update).
-// Position always gets reset to floor 1's entry either way, per the note
-// above.
+// Only create the player (and its stats) on a genuine cold start - a
+// restored api already has one, with whatever Health it had at snapshot
+// time (that part of the DTO round-trips correctly; only Position gets
+// reset, per the note above).
 const player = restored
   ? api.query(['Position', 'PlayerControlled'])[0]
   : (() => {
       const entity = api.createEntity();
       api.addComponent(entity, 'PlayerControlled', {});
+      api.addComponent(entity, 'Health', { current: PLAYER_HEALTH, max: PLAYER_HEALTH });
+      api.addComponent(entity, 'Attack', { value: PLAYER_ATTACK });
+      api.addComponent(entity, 'Defense', { value: PLAYER_DEFENSE });
       api.addActor(entity, 0);
       return entity;
     })();
@@ -74,13 +90,17 @@ const keyboardSource = wireKeyboardInput({
   api,
   player,
   onMove: () => {
-    const outcome = floor.checkForDescent(player);
-    if (outcome === 'won') {
-      showWinScreen(document.getElementById('game'));
-      return;
-    }
+    const dead = api.getComponent(player, 'Health').current <= 0;
+    // Death takes priority over descent - checked first, but still render
+    // the actual final frame before overlaying either placeholder screen,
+    // rather than freezing on the previous turn's stale canvas.
+    const outcome = dead ? null : floor.checkForDescent(player);
     if (outcome === 'descended') renderer.resetZone();
+
     renderer.render(api, player, floor.getZone());
+
+    if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
+    if (outcome === 'won') showWinScreen(document.getElementById('game'));
   },
 });
 

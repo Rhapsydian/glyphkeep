@@ -3,22 +3,23 @@
 ## NEXT SESSION
 
 `DESIGN.md` is complete (session 1, a `/decision-session`, 2026-07-26).
-No implementation has started. **Next session is `/dev-session
-C:\Users\husbando\Claude\glyphkeep`, Phase 1: scaffold + core loop** —
-`npm create glyphrogue-game`, real input/camera/FOV wired to actual world
-state (replacing the scaffold's static demo), BSP-only floor generation
-for floors 1-10, one enemy (`Wanders`) to prove combat works, permadeath
-to a placeholder menu, reaching floor 10 as a trivial win. See
-`DESIGN.md`'s "Implementation phasing" section for the full 9-phase plan
-this fits into — kickoff research should verify every `glyphrogue`
-primitive `DESIGN.md` names against real current code before building
-against it, since most of this spec was written before any glyphkeep code
-existed.
+Phase 1 ("scaffold + core loop") is complete as of this session (session
+2, 2026-07-26), across four checkpoints — see the "Implementation
+phasing" entry below for what landed. **Next session is Phase 2: full
+bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards` (the remaining three
+solo behaviors), combo enemies (multiple behavior markers on one entity,
+priority-tuned `dispatchExclusive` resolution), undead-skewing enemy
+distribution by floor depth, and Duke Glyphmund replacing the placeholder
+win floor. Kickoff research should re-verify any `glyphrogue` primitives
+this phase needs against real current code, same as Phase 1's kickoff did
+— and should look at the three cross-project gaps logged below
+(`runConnectivityPass` isn't needed yet; the rule-ctx-has-no-rng gap might
+matter again for boss-specific rolls) before building against them.
 
 The GitHub remote ([Rhapsydian/glyphkeep](https://github.com/Rhapsydian/glyphkeep))
 exists, is pushed, and has Pages source set to GitHub Actions — the
-deploy pipeline is wired and will activate automatically once Phase 1
-adds the scaffold's `deploy-pages.yml` workflow and pushes.
+deploy pipeline is wired (`deploy-pages.yml` landed in Phase 1 checkpoint
+1) and will activate on the next push to `main`.
 
 ## Implementation phasing
 
@@ -26,10 +27,14 @@ Dependency-ordered, from `DESIGN.md`'s "Implementation phasing" section.
 Check items off here as they land, same convention `glyphrogue` itself
 uses.
 
-1. **Scaffold + core loop** — in progress (checkpoints 1-3 of 4 landed:
-   scaffold merge + live camera/FOV render loop; keyboard input wired to
-   movement via a glyphkeep-authored `Move` rule; BSP floors 1-10 with a
-   stairs-triggered descent and a placeholder win screen on floor 10).
+1. **Scaffold + core loop** — done (session 2, 2026-07-26). Four
+   checkpoints: scaffold merge + live camera/FOV render loop; keyboard
+   input wired to movement via a glyphkeep-authored `Move` rule; BSP
+   floors 1-10 with a stairs-triggered descent and a placeholder win
+   screen on floor 10; one `Wanders` enemy type (`wanderer`) populated per
+   room, a glyphkeep-authored `Attack` rule (accuracy/damage rolls against
+   glyphkeep's own seeded rng, since a rule's ctx has no rng access — see
+   cross-project section), and permadeath to a placeholder death screen.
 2. **Full bestiary + boss** — not started.
 3. **Equipment & inventory** — not started.
 4. **Meta-progression & persistence** — not started. *(Core game complete
@@ -107,3 +112,19 @@ uses.
   in Phase 1 is blocked. Will genuinely block Phase 5 (stamped event
   rooms — shops/shrines/cursed rooms/vaults — which do need the mandatory
   pass to guarantee a stamp isn't isolated) — revisit then.
+- **A rule's `ctx` (`actions.js`'s `createContext`) has no RNG access at
+  all** (found checkpoint 4, writing the `Attack` rule DESIGN.md's Combat
+  section calls for — "an accuracy/evasion check plus a weapon min-max
+  damage roll, both against the engine's seeded RNG"). Only a *generator*'s
+  ctx carries `rng` (`mapgen.js`); `dispatch`/`dispatchExclusive`/
+  `createContext` never thread `api.rng` through the way `mapQuery`/
+  `renderEvents`/`scheduler` already are, so no rule anywhere can roll
+  against the shared seeded stream. **Not fixed this session** — unlike
+  the three export-only gaps above, this is a real architectural change
+  (touching `actions.js`/`engine.js`/`api.js`, not a two-line addition),
+  so per `.claude/dev-session.md` it's logged for its own conversation
+  rather than decided solo. Workaround: `src/rules.js`'s `Attack` rule
+  takes its own `createRng` instance (seeded from `api.rng.state` at
+  bootstrap, exported from `@glyphrogue/core` already) as an explicit
+  dependency instead of reaching for a nonexistent `ctx.rng` — a separate
+  deterministic stream, not literally `api.rng` itself.

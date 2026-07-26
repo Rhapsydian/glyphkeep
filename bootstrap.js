@@ -5,10 +5,11 @@
 // editor's Plugin management tool also reads this file's source text
 // directly (see vite.config.js's bootstrapPath) to show which plugins are
 // enabled - add/remove plugins here by hand, or via that tool.
-import { loadPlugins } from '@glyphrogue/core';
+import { loadPlugins, wandersPlugin } from '@glyphrogue/core';
 import starterPlugin from './src/plugins/starter-plugin/index.js';
 import floorPlugin from './src/plugins/floor-plugin/index.js';
+import enemyPlugin from './src/plugins/enemy-plugin/index.js';
 
 export function registerPlugins(api) {
-  loadPlugins(api, [starterPlugin, floorPlugin]);
+  loadPlugins(api, [starterPlugin, floorPlugin, wandersPlugin, enemyPlugin]);
 }

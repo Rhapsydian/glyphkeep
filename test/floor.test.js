@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApi, loadPlugins } from '@glyphrogue/core';
+import { createApi, loadPlugins, wandersPlugin } from '@glyphrogue/core';
 import floorPlugin from '../src/plugins/floor-plugin/index.js';
+import enemyPlugin from '../src/plugins/enemy-plugin/index.js';
 import { createFloorState } from '../src/floor.js';
 import { FLOOR_COUNT } from '../src/generators/floorGenerator.js';
 
 function buildApiWithPlayer() {
   const api = createApi();
-  loadPlugins(api, [floorPlugin]);
+  loadPlugins(api, [floorPlugin, wandersPlugin, enemyPlugin]);
 
   const player = api.createEntity();
   api.addComponent(player, 'PlayerControlled', {});

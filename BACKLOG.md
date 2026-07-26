@@ -189,3 +189,39 @@ this discipline can miss things a workaround quietly absorbs without
 ever being explicitly noticed as "a glyphrogue gap, not just an extra
 line of glyphkeep code" — the close-out pass's Tokenote-resolution step
 is a real backstop for this, not just paperwork.
+
+Three more found immediately after close-out, while adding a GitHub
+Pages link to this README (the two `deploy-pages` runs so far had both
+actually failed, silently — nobody had checked):
+
+- **`packages/editor`'s `dist/` is gitignored in `glyphrogue` (a real
+  Vite library build, not committed source), but this repo's own
+  `vite.config.js` imports `@glyphrogue/editor/devServerPlugin`
+  unconditionally at config-load time** — needed even for `npm run
+  build`, not just the dev-only entry that actually uses it at runtime.
+  CI only checks out this repo, never builds `packages/editor` in the
+  linked `glyphrogue` checkout, so the import can't resolve. Not a
+  `glyphrogue` code gap (the `dist`/`src` split there is correct and
+  deliberate) — a consequence of consuming `glyphrogue` via `file:`
+  references in a CI context that convention hadn't been tested against
+  before. Worked around in `.github/workflows/deploy-pages.yml`: check
+  out `glyphrogue` as a sibling, build `packages/editor` there, then
+  install/build this repo — same interim-workaround posture as the
+  `file:` references themselves, revisit at the next real publish
+  checkpoint.
+- **`create-glyphrogue-game`'s scaffold template hardcoded
+  `vite.config.js`'s Pages-mode `base` as root `'/'`** — only correct for
+  a `<user>.github.io` root repo or a custom domain; an ordinary project
+  repo (this scaffold's own normal case, including this one) is served
+  from `/<repo-name>/`, so every built asset 404s. A real template bug,
+  not glyphkeep-specific — fixed directly in `glyphrogue`
+  (`packages/cli/templates/default/vite.config.js`, templating the game
+  name into the base path), with a regression test in
+  `packages/cli/test/scaffold.test.js`. This repo's own already-generated
+  `vite.config.js` needed the same manual fix (`base: '/glyphkeep/'`),
+  since the template fix doesn't retroactively touch anything already
+  scaffolded.
+
+Verified end-to-end: after both fixes, `deploy-pages` actually succeeds
+(build + deploy jobs both green), and <https://rhapsydian.github.io/glyphkeep/>
+loads the real game with no console errors or 404s.

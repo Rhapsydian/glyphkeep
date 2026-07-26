@@ -11,10 +11,15 @@ const projectRoot = dirname(fileURLToPath(import.meta.url));
 // dev.html is never added to build.rollupOptions.input) - dev.html
 // (imports @glyphrogue/core *and* @glyphrogue/editor) only gets served by
 // the dev server, via `npm run dev`'s --open flag below. base follows the
-// same per-mode switch pixelyph established: root '/' for GitHub Pages,
-// relative './' for itch.io (`vite build --mode itch`).
+// same per-mode switch pixelyph established: relative './' for itch.io
+// (`vite build --mode itch`), '/glyphkeep/' for GitHub Pages - this repo
+// is a normal project repo (not rhapsydian.github.io itself, no custom
+// domain), served from that subpath, not root '/', or every built asset
+// 404s (found live: the scaffold's own template had this same bug,
+// glyphrogue/packages/cli/templates/default/vite.config.js, fixed there
+// too). Rename the repo, update this too.
 export default defineConfig(({ mode }) => ({
-  base: mode === 'itch' ? './' : '/',
+  base: mode === 'itch' ? './' : '/glyphkeep/',
   plugins: [
     // Powers the map editor / composition tool / plugin management /
     // config UI's file-write API when running against this project's real

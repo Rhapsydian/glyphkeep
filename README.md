@@ -7,6 +7,8 @@ engine — its first real downstream game, scaffolded via
 Descend a ruined keep haunted by the ghosts of the family that once ruled
 it. Full design: [`DESIGN.md`](DESIGN.md).
 
+**Play now**: <https://rhapsydian.github.io/glyphkeep/>
+
 ## Status
 
 Phase 1 ("scaffold + core loop") is complete — floors 1-10 generate for
@@ -61,9 +63,14 @@ back to real semver ranges at the next natural publish checkpoint.
 
 ## Deploy
 
-- **GitHub Pages**: already enabled (Settings → Pages → Source → GitHub
-  Actions). `.github/workflows/deploy-pages.yml` deploys `npm run build`'s
-  output on every push to `main`.
+- **GitHub Pages**: live at <https://rhapsydian.github.io/glyphkeep/>.
+  `.github/workflows/deploy-pages.yml` deploys `npm run build`'s output on
+  every push to `main`. Builds `@glyphrogue/editor` from a sibling
+  checkout first (an interim workaround for the `file:`-reference local
+  dev convention below — CI has no pre-built `dist/` to fall back on the
+  way a published npm package would). `vite.config.js`'s `base` is
+  `/glyphkeep/`, matching this repo's actual Pages subpath — renaming the
+  repo means updating this too.
 - **itch.io**: build with the itch-specific relative base path, then push
   with [butler](https://itch.io/docs/butler/):
 

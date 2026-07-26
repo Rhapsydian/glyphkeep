@@ -5,16 +5,40 @@
 `DESIGN.md` is complete (session 1, a `/decision-session`, 2026-07-26).
 Phase 1 ("scaffold + core loop") is complete as of this session (session
 2, 2026-07-26), across four checkpoints — see the "Implementation
-phasing" entry below for what landed. **Next session is Phase 2: full
-bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards` (the remaining three
-solo behaviors), combo enemies (multiple behavior markers on one entity,
-priority-tuned `dispatchExclusive` resolution), undead-skewing enemy
-distribution by floor depth, and Duke Glyphmund replacing the placeholder
-win floor. Kickoff research should re-verify any `glyphrogue` primitives
-this phase needs against real current code, same as Phase 1's kickoff did
-— and should look at the three cross-project gaps logged below
-(`runConnectivityPass` isn't needed yet; the rule-ctx-has-no-rng gap might
-matter again for boss-specific rolls) before building against them.
+phasing" entry below for what landed. Phase 2 is scoped and ready, but
+**two sessions come first, in order, before Phase 2 starts**:
+
+1. **A `glyphrogue` session** (see `glyphrogue/BACKLOG.md`'s NEXT SESSION
+   section) — threads `rng` through the action/rule pipeline (`ctx.rng`,
+   mirroring the generator ctx's shape) so a rule can roll against the
+   real seeded stream instead of a rule having no rng access at all, plus
+   a bundled `isWalkableCell` export fix. Scoped as its own session rather
+   than fixed live this session because it's a real architectural change
+   (`createContext`/`dispatch`/`dispatchExclusive`/`createEngine`), not a
+   small export addition — see the "rule's `ctx` has no RNG access"
+   cross-project entry below for the full writeup.
+2. **A glyphkeep fold-back session, immediately after** — swaps
+   `src/rules.js`'s `combatRng` workaround (a second, separate seeded
+   stream) for the real `ctx.rng` once it exists, and swaps
+   `src/game.js`'s `isWalkableInZone`/`isOpaqueInZone`/`cellAt` trio for
+   the newly-exported `isWalkableCell` (or equivalent) instead of the
+   locally-reinvented versions. Keeps glyphkeep current as glyphrogue's
+   reference downstream consumer rather than carrying workaround debt
+   into Phase 2.
+
+**Then Phase 2: full bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards`
+(the remaining three solo behaviors), combo enemies (multiple behavior
+markers on one entity, priority-tuned `dispatchExclusive` resolution),
+undead-skewing enemy distribution by floor depth, and Duke Glyphmund
+replacing the placeholder win floor. Kickoff research should re-verify
+any `glyphrogue` primitives this phase needs against real current code,
+same as Phase 1's kickoff did, and should also revisit `glyphrogue/
+BACKLOG.md`'s three new deferred items (move-action resolution as
+first-party content, camera/FOV/render-loop and keyboard-input wiring as
+scaffold-template boilerplate) once Phase 2 has actually happened —
+they're explicitly waiting for a second data point before being designed
+for real. `runConnectivityPass`'s export gap (below) still isn't needed
+until Phase 5.
 
 The GitHub remote ([Rhapsydian/glyphkeep](https://github.com/Rhapsydian/glyphkeep))
 exists, is pushed, and has Pages source set to GitHub Actions — the

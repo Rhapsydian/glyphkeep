@@ -24,6 +24,48 @@ implementing it is expected, not a failure. This file governs how
    the user, consistent with how every actual design decision in
    `glyphrogue`'s history has been made live, never solo.
 
+## Phase-end review: promoting glyphkeep work upstream
+
+At the end of every implementation phase (not every checkpoint — this is
+a phase-boundary ritual, sized to `DESIGN.md`'s "Implementation phasing"
+list), review everything built that phase and assess, for each
+meaningfully reusable piece:
+
+- **Is it a strong candidate for a first-class Content or Service plugin
+  in `glyphrogue`?** (Content: id-keyed, multi-instance — rules,
+  generators, entity types, matching the `wandersPlugin`/`bspPlugin`
+  shape. Service: single-slot, swappable — matching `memory`/
+  `audioLoader`.) Not everything reusable fits this shape — a render loop
+  or an input-wiring pattern is closer to scaffold-template boilerplate
+  or a plain exported utility than a plugin; call that out explicitly
+  rather than forcing a plugin framing onto it.
+- **Is it a strong candidate for a `glyphrogue` baseline/engine change**
+  (an export fix, a primitive the engine should provide directly, a
+  scaffold-template default)?
+- Anything genuinely game-specific (glyphkeep's actual combat formulas,
+  its specific floor/stairs mechanics) is **not** a candidate — say so
+  explicitly rather than leaving it unaddressed, so the review reads as
+  complete.
+
+For each real candidate, recommend (don't unilaterally decide, same
+posture as every other design call in this project's history):
+
+- Whether it's worth a dedicated `glyphrogue` session before continuing to
+  the next phase, or whether it should wait for more evidence from a
+  later phase before locking in a shape (premature generalization off one
+  phase's data is a real risk — several of `glyphrogue`'s own deferred
+  items exist because of this same discipline).
+- Whether, after a `glyphrogue` session lands a fix, a glyphkeep
+  follow-up session should fold it back in (swap a glyphkeep-side
+  workaround for the new first-class primitive) before glyphkeep's own
+  next phase starts.
+
+Document the outcome in both `BACKLOG.md`s (glyphkeep's NEXT SESSION
+pointer sequencing any glyphrogue/fold-back sessions ahead of the next
+phase; glyphrogue's NEXT SESSION and/or "Deferred / future items" sections
+for whatever glyphrogue-side work resulted) so a future session can pick
+up the recommendation directly, without re-deriving the analysis.
+
 ## Local development against `glyphrogue`
 
 While actively iterating on `glyphkeep` and fixing `glyphrogue` gaps as
@@ -46,3 +88,15 @@ exactly as it was the first time `glyphrogue`'s packages were published
 Before that checkpoint, `glyphkeep`'s own `package.json` should point at
 the local link, not a semver range that doesn't reflect what's actually
 being tested against.
+
+## Session logs across repos
+
+If a glyphkeep session makes any real changes to `glyphrogue` (per
+"Handling `glyphrogue` issues found along the way" above — a live fix,
+not just a logged-but-deferred gap), write **and store a session log in
+both repos** at close-out, not just glyphkeep's: `glyphkeep/docs/
+session-logs/` per glyphkeep's own convention, and a matching entry in
+`glyphrogue/docs/session-logs/` (continuing that repo's own session
+numbering) covering specifically what changed there and why. A session
+that only reads/researches `glyphrogue` without changing it doesn't need
+a `glyphrogue`-side log.

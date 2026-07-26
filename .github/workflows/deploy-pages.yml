@@ -37,6 +37,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      # packages/editor's dist/ is gitignored (it's a real Vite library
+      # build, not committed source - only packages/core/input export
+      # directly from src/, no build step needed for those). glyphkeep's
+      # own vite.config.js imports @glyphrogue/editor/devServerPlugin
+      # unconditionally (evaluated for any vite command, dev or build),
+      # so this has to exist before glyphkeep's own install/build can even
+      # load its config, not just for the dev-only entry that actually
+      # uses it at runtime.
+      - run: npm install
+        working-directory: glyphrogue/packages/editor
+      - run: npm run build
+        working-directory: glyphrogue/packages/editor
       - run: npm install
         working-directory: glyphkeep
       - run: npm run build

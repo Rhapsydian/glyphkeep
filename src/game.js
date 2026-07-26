@@ -94,6 +94,10 @@ export function instantiateZoneContent(api, zone) {
   const player = api.createEntity();
   api.addComponent(player, 'Position', { x: playerStart.x, y: playerStart.y });
   api.addComponent(player, 'PlayerControlled', {});
+  // Without this, the scheduler's next()/act() never selects the player at
+  // all (it only ever iterates registered actors) - api.run() would loop
+  // forever instead of locking to wait for input.
+  api.addActor(player, 0);
   return player;
 }
 

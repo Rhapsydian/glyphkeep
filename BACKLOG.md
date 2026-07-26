@@ -26,8 +26,9 @@ Dependency-ordered, from `DESIGN.md`'s "Implementation phasing" section.
 Check items off here as they land, same convention `glyphrogue` itself
 uses.
 
-1. **Scaffold + core loop** — in progress (checkpoint 1 of 4: scaffold
-   merge + live camera/FOV render loop, landed).
+1. **Scaffold + core loop** — in progress (checkpoints 1-2 of 4 landed:
+   scaffold merge + live camera/FOV render loop; keyboard input wired to
+   movement via a glyphkeep-authored `Move` rule).
 2. **Full bestiary + boss** — not started.
 3. **Equipment & inventory** — not started.
 4. **Meta-progression & persistence** — not started. *(Core game complete

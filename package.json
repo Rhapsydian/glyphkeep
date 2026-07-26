@@ -1,0 +1,22 @@
+{
+  "name": "glyphkeep",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --open /dev.html",
+    "build": "vite build",
+    "build:itch": "vite build --mode itch",
+    "preview": "vite preview",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@glyphrogue/core": "file:../glyphrogue/packages/core",
+    "@glyphrogue/input": "file:../glyphrogue/packages/input"
+  },
+  "devDependencies": {
+    "@glyphrogue/editor": "file:../glyphrogue/packages/editor",
+    "svelte": "^5.56.7",
+    "vite": "^8.1.5"
+  }
+}

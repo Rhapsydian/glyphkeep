@@ -66,6 +66,35 @@ phase; glyphrogue's NEXT SESSION and/or "Deferred / future items" sections
 for whatever glyphrogue-side work resulted) so a future session can pick
 up the recommendation directly, without re-deriving the analysis.
 
+## `checkpoint-plan` override: a review pass after each checkpoint
+
+When using the `checkpoint-plan` skill in this project, add one step to
+"Executing checkpoints," between the commit landing and the hard stop for
+the user's go-ahead: spawn a `general-purpose` agent, in the background,
+to review the diff/commits since the last checkpoint (since the phase
+started, for checkpoint 1). Ask it specifically for signs of friction or
+workaround patterns, not a full code review and not a style/quality pass
+(that's `/code-review`/`simplify`'s job) — things like a primitive
+reimplemented locally because it wasn't reachable from
+`@glyphrogue/core`'s exports, a manual workaround around something that
+reads like a missing engine capability, or a pattern repeated across
+files that suggests a needed abstraction. Report its findings alongside
+the checkpoint's own "what shipped / how verified / context usage"
+report — running it in the background means its results may arrive
+slightly after that report, while still waiting on the user's go-ahead,
+which is fine; relay them whenever they land, still before starting the
+next checkpoint.
+
+This complements, not replaces, "log immediately" above — anything the
+review agent surfaces gets logged in `BACKLOG.md`'s cross-project section
+the same as anything caught live. It also complements rather than
+replaces the user actively watching and taking their own notes (e.g. via
+Tokenote) while a session runs: a diff-reading review agent only catches
+what shows up in code/commits, not things noticed and silently worked
+around without leaving a trace — session 2's scheduler-hang gap is the
+clearest example, never visible in any diff on its own, only caught by
+Tokenote's real-time note.
+
 ## Local development against `glyphrogue`
 
 While actively iterating on `glyphkeep` and fixing `glyphrogue` gaps as

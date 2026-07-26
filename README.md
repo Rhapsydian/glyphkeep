@@ -11,19 +11,19 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 
 Design complete (session 1, 2026-07-26). No implementation yet — see
 [`BACKLOG.md`](BACKLOG.md) for the phased build plan and current NEXT
-SESSION pointer.
+SESSION pointer. The repo is live and Pages is wired (see Deploy below),
+but there's nothing playable until Phase 1 lands.
 
 ## Deploy
 
 Once real code exists (starting with implementation Phase 1), this repo
 will deploy the same way `glyphrogue`'s own downstream scaffolds do:
 
-- **GitHub Pages**: a `deploy-pages.yml` workflow (provided by the
-  `create-glyphrogue-game` scaffold) builds and deploys automatically on
-  push to `main`, once Pages is enabled for this repo under
-  **Settings → Pages → Source → GitHub Actions**. Until Phase 1 lands,
-  there is no built game to deploy — enabling Pages now is groundwork,
-  not an immediate preview.
+- **GitHub Pages**: already enabled (Settings → Pages → Source → GitHub
+  Actions). A `deploy-pages.yml` workflow (provided by the
+  `create-glyphrogue-game` scaffold) will build and deploy automatically
+  on push to `main` once Phase 1 adds it — there's no built game to
+  deploy yet, so Pages is currently idle.
 - **itch.io**: not scripted (a `BUTLER_API_KEY` and per-project channel
   name aren't things a template can fill in safely) — once there's a
   build, push it with:

@@ -15,10 +15,10 @@ primitive `DESIGN.md` names against real current code before building
 against it, since most of this spec was written before any glyphkeep code
 existed.
 
-Before Phase 1 can produce anything visible on GitHub Pages, the GitHub
-remote needs to exist — see this repo's `README.md` for the manual
-repo-creation checklist; the assistant will add the remote and push once
-it's confirmed to exist.
+The GitHub remote ([Rhapsydian/glyphkeep](https://github.com/Rhapsydian/glyphkeep))
+exists, is pushed, and has Pages source set to GitHub Actions — the
+deploy pipeline is wired and will activate automatically once Phase 1
+adds the scaffold's `deploy-pages.yml` workflow and pushes.
 
 ## Implementation phasing
 

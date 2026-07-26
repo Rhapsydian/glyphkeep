@@ -19,15 +19,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: glyphkeep
+      # Interim workaround: package.json's @glyphrogue/* deps are file:
+      # references against a local sibling checkout (.claude/dev-session.md's
+      # "local dev against glyphrogue" convention - no glyphrogue version
+      # bump has been published yet with fixes this build needs). Checking
+      # glyphrogue out as an actual sibling here mirrors that local layout
+      # so the file: references resolve in CI the same way they do locally.
+      # Remove this step (and switch package.json back to a real published
+      # semver range) once glyphrogue publishes a version incorporating
+      # those fixes.
+      - uses: actions/checkout@v4
+        with:
+          repository: Rhapsydian/glyphrogue
+          path: glyphrogue
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
+        working-directory: glyphkeep
       - run: npm run build
+        working-directory: glyphkeep
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: glyphkeep/dist
 
   deploy:
     needs: build

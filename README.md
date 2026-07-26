@@ -12,9 +12,10 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 Phase 1 ("scaffold + core loop") is complete — floors 1-10 generate for
 real (BSP), the player moves and fights with real keyboard input, one
 enemy type (`Wanders`) populates every floor, and reaching floor 10 (or
-dying) shows a placeholder end screen. See [`BACKLOG.md`](BACKLOG.md) for
-the phased build plan and current NEXT SESSION pointer (Phase 2: full
-bestiary + boss).
+dying) shows a placeholder end screen. Next up: a `glyphrogue` engine
+session plus a glyphkeep fold-back session, then Phase 2 (full bestiary +
+boss) — see [`BACKLOG.md`](BACKLOG.md) for the full sequencing and the
+phased build plan.
 
 ## Getting started
 

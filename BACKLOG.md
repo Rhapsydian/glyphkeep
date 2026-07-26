@@ -5,7 +5,10 @@
 `DESIGN.md` is complete (session 1, a `/decision-session`, 2026-07-26).
 Phase 1 ("scaffold + core loop") is complete as of this session (session
 2, 2026-07-26), across four checkpoints — see the "Implementation
-phasing" entry below for what landed. Phase 2 is scoped and ready, but
+phasing" entry below for what landed, and `docs/session-logs/
+session-2-2026-07-26.md` for the full session log (this session also has
+a sibling log in `glyphrogue/docs/session-logs/session-43-2026-07-26.md`,
+per the new dual-repo convention below). Phase 2 is scoped and ready, but
 **two sessions come first, in order, before Phase 2 starts**:
 
 1. **A `glyphrogue` session** (see `glyphrogue/BACKLOG.md`'s NEXT SESSION

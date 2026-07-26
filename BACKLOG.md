@@ -152,3 +152,37 @@ uses.
   bootstrap, exported from `@glyphrogue/core` already) as an explicit
   dependency instead of reaching for a nonexistent `ctx.rng` — a separate
   deterministic stream, not literally `api.rng` itself.
+- **`act()`/`run()` (`engine.js`) hang forever instead of erroring when
+  called against an empty scheduler** (actually first hit checkpoint 2,
+  before `instantiateZoneContent` called `api.addActor` for the player —
+  worked around in the moment, but only formally caught and logged at
+  this session's close-out via glyphkeep's own Tokenote companion notes
+  flagging it in real time). `next(scheduler)` correctly returns
+  `undefined` for "no actors registered," but `act()` fell straight
+  through to `dispatchExclusive`/`spend` with `entity=undefined` anyway,
+  which corrupts `scheduler.actors` with a `NaN`-budget entry — every
+  future `next()` call then returns `undefined` too, forever, with no
+  lock ever set to stop `run()`'s `while (!engine.locked)` loop. Small,
+  unambiguous, a real crash/hang-class bug independent of glyphkeep's own
+  mistake that first surfaced it — fixed same-session directly in
+  `glyphrogue` (an early-return guard in `act()`, a loop-break in `run()`
+  on the resulting `idle` flag), with regression tests in
+  `engine.test.js`.
+- **`create-glyphrogue-game`'s scaffold template shipped with no
+  `.gitignore`** (same close-out pass, same Tokenote source). Every
+  generated game's `node_modules`/`dist` were one `git add .` away from
+  getting committed — glyphkeep's own root `.gitignore` was added by hand
+  in checkpoint 1 as a local workaround, never fed back. Small,
+  unambiguous — fixed same-session directly in `glyphrogue`
+  (`packages/cli/templates/default/.gitignore`), with a regression test
+  in `packages/cli/test/scaffold.test.js` asserting the real template
+  copies it through.
+
+**Process note**: the two fixes above were both real gaps present since
+checkpoints 1-2, not new regressions — they just weren't caught by this
+project's own "log immediately" discipline in the moment, only surfaced
+via an external tool (Tokenote) watching the session. Worth remembering
+this discipline can miss things a workaround quietly absorbs without
+ever being explicitly noticed as "a glyphrogue gap, not just an extra
+line of glyphkeep code" — the close-out pass's Tokenote-resolution step
+is a real backstop for this, not just paperwork.

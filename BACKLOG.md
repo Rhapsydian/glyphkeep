@@ -99,6 +99,19 @@ uses.
   (a persisted enabled-mods settings slice read at boot), not just
   glyphkeep content. Explicitly kept on `glyphrogue/BACKLOG.md`'s own
   deferred list; not pulled into this project.
+- **Duke Glyphmund's summoned undead adds** — `DESIGN.md`'s "possibly
+  summoned undead adds" was resolved live (Phase 2 decision session,
+  2026-07-28): a working enrage-only fight is a complete, testable boss
+  encounter on its own; summon logic (spawning entities mid-encounter,
+  scheduler/floor-owned-entity wiring, balancing their appearance) is a
+  second feature's worth of scope hiding inside "boss." Cut from Phase 2,
+  revisit only if the bare enrage fight plays too flat once tested.
+- **Wraith/mouse kill rewards (essence/gold)** — DESIGN.md's bestiary flags
+  wraith as a high-essence reward and mouse as a high-gold reward, but
+  neither essence-banking (Phase 4) nor gold currency (Phase 5) exists yet.
+  Behavior/stat identity shipped in Phase 2; the actual numeric reward
+  hookup waits for whichever phase builds the system that consumes it,
+  rather than an inert placeholder field nobody reads yet.
 
 ## Cross-project issues found in `glyphrogue`
 

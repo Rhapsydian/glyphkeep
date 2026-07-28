@@ -101,12 +101,37 @@ export const ENEMY_ARCHETYPES = {
   },
 };
 
+export const DUKE_GLYPHMUND_TYPE = 'duke-glyphmund';
+
+// Deterministic, hand-placed encounters - never picked by floorGenerator.js's
+// random bestiary distribution (pickEnemyType only ever reads
+// ENEMY_ARCHETYPES, never this table), so no minFloor/maxFloor here. Duke
+// Glyphmund's movement is the stock Guards plugin, same as every other
+// Guards-marked enemy - only his Attack resolution is bespoke (rules.js's
+// enrage bump, gated by the Boss marker below), per DESIGN.md's "base AI is
+// Guards-style... with a bespoke rule layered on top," deliberately not a
+// reskin of the standalone Guards enemy.
+export const BOSS_ARCHETYPES = {
+  [DUKE_GLYPHMUND_TYPE]: {
+    health: 40, attack: 8, defense: 4,
+    components: { Guards: {}, Boss: {} },
+    char: 'D', color: '#a020a0',
+  },
+};
+
+// Every entity type this plugin defines, regardless of how it's placed -
+// what floor.js's actor/floor-owned bookkeeping and game.js's
+// symbol/palette table actually need; neither cares about the
+// bestiary/boss distinction, just "every type that needs a Position/turn/
+// render entry."
+export const ALL_ARCHETYPES = { ...ENEMY_ARCHETYPES, ...BOSS_ARCHETYPES };
+
 export default {
   id: 'enemy-plugin',
   version: '1.0.0',
   dependencies: { core: `^${CORE_API_VERSION}` },
   register: (api) => {
-    for (const [type, archetype] of Object.entries(ENEMY_ARCHETYPES)) {
+    for (const [type, archetype] of Object.entries(ALL_ARCHETYPES)) {
       api.registerEntityType(type, {
         components: {
           Position: {},

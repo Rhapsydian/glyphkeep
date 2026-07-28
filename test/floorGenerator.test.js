@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApi, loadPlugins } from '@glyphrogue/core';
 import floorPlugin from '../src/plugins/floor-plugin/index.js';
 import { FLOOR_WIDTH, FLOOR_HEIGHT } from '../src/generators/floorGenerator.js';
-import { ENEMY_ARCHETYPES } from '../src/plugins/enemy-plugin/index.js';
+import { ENEMY_ARCHETYPES, DUKE_GLYPHMUND_TYPE } from '../src/plugins/enemy-plugin/index.js';
 
 function buildApi() {
   const api = createApi();
@@ -97,4 +97,26 @@ test('the same (worldSeed, zoneId, depth) reproduces an identical enemy distribu
   const second = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-5', params: { depth: 5 } });
 
   assert.deepEqual(first, second);
+});
+
+test('the last floor places Duke Glyphmund in a boss anchor instead of stairs', () => {
+  const zone = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-10', params: { depth: 10 } });
+
+  assert.equal(zone.anchors.find((anchor) => anchor.id === 'stairs'), undefined);
+  assert.equal(zone.entities.find((entity) => entity.type === 'stairs'), undefined);
+
+  const boss = zone.anchors.find((anchor) => anchor.id === 'boss');
+  assert.ok(boss);
+  const bossEntity = zone.entities.find((entity) => entity.type === DUKE_GLYPHMUND_TYPE);
+  assert.ok(bossEntity);
+  assert.deepEqual({ x: bossEntity.x, y: bossEntity.y }, { x: boss.x, y: boss.y });
+});
+
+test('every floor before the last one still places ordinary stairs, not a boss', () => {
+  for (const depth of [1, 5, 9]) {
+    const zone = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: `floor-${depth}`, params: { depth } });
+    assert.ok(zone.anchors.find((anchor) => anchor.id === 'stairs'));
+    assert.equal(zone.anchors.find((anchor) => anchor.id === 'boss'), undefined);
+    assert.equal(zone.entities.find((entity) => entity.type === DUKE_GLYPHMUND_TYPE), undefined);
+  }
 });

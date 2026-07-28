@@ -4,17 +4,17 @@
 // floor we're on" and swapping zones on descent is ordinary game-level
 // state, not something the engine needs to provide.
 import { FLOOR_COUNT } from './generators/floorGenerator.js';
-import { ENEMY_ARCHETYPES } from './plugins/enemy-plugin/index.js';
+import { ALL_ARCHETYPES } from './plugins/enemy-plugin/index.js';
 
 function findAnchor(zone, id) {
   return zone.anchors.find((anchor) => anchor.id === id);
 }
 
-// Every enemy archetype needs a scheduler turn, not just a Position on the
-// map. Derived from ENEMY_ARCHETYPES rather than hand-listed so a new
-// archetype (checkpoint 2's combo enemies, checkpoint 3's boss) doesn't
-// need this file touched again to be scheduled correctly.
-const ACTOR_ENTITY_TYPES = new Set(Object.keys(ENEMY_ARCHETYPES));
+// Every enemy archetype (bestiary and boss alike) needs a scheduler turn,
+// not just a Position on the map. Derived from ALL_ARCHETYPES rather than
+// hand-listed so a new archetype doesn't need this file touched again to be
+// scheduled correctly.
+const ACTOR_ENTITY_TYPES = new Set(Object.keys(ALL_ARCHETYPES));
 
 // Entity types a generated floor itself owns (stairs, enemies) - never the
 // player. Destroying by this tag rather than a locally-tracked id list is
@@ -75,21 +75,33 @@ export function createFloorState(api) {
     getCurrentFloor: () => currentFloor,
     placePlayerAtEntry,
 
-    // Call after every resolved player move. Returns 'won' once the player
-    // reaches floor FLOOR_COUNT's stairs, 'descended' after generating and
-    // moving onto the next floor, or null if the player isn't on the
-    // stairs cell at all.
+    // Call after every resolved player move. Returns 'descended' after
+    // generating and moving onto the next floor, or null if the player
+    // isn't on the stairs cell - including on floor FLOOR_COUNT, which has
+    // no stairs anchor at all (see isBossDefeated below for how winning is
+    // actually detected there).
     checkForDescent(player) {
-      const position = api.getComponent(player, 'Position');
       const stairs = findAnchor(zone, 'stairs');
-      if (position.x !== stairs.x || position.y !== stairs.y) return null;
+      if (!stairs) return null;
 
-      if (currentFloor === FLOOR_COUNT) return 'won';
+      const position = api.getComponent(player, 'Position');
+      if (position.x !== stairs.x || position.y !== stairs.y) return null;
 
       currentFloor += 1;
       generateCurrentFloor();
       placePlayerAtEntry(player);
       return 'descended';
+    },
+
+    // Call after every resolved turn on floor FLOOR_COUNT. dieRule already
+    // destroys a defeated Boss-marked entity synchronously inside dispatch,
+    // the same way any other defeated enemy is - this just checks whether
+    // one is still standing, mirroring the outer game loop's own
+    // post-dispatch Health check for the player's death (there's no
+    // "on-death" hook to react to synchronously either way, both are
+    // detected by their absence/state after the fact).
+    isBossDefeated() {
+      return currentFloor === FLOOR_COUNT && api.query(['Boss']).length === 0;
     },
   };
 }

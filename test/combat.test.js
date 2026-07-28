@@ -1,7 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApi } from '@glyphrogue/core';
-import { registerAttackRule, registerDieRule, HIT_CHANCE, WEAPON_MIN_DAMAGE } from '../src/rules.js';
+import {
+  registerAttackRule,
+  registerDieRule,
+  HIT_CHANCE,
+  WEAPON_MIN_DAMAGE,
+  BOSS_ENRAGE_DAMAGE_BONUS,
+} from '../src/rules.js';
 
 // ctx.rng is the same live object as api.rng, so a scripted deterministic
 // sequence (instead of a real seeded stream) is injected by monkey-patching
@@ -76,6 +82,47 @@ test('higher Defense lowers hit chance, not just damage (wraith\'s "hard to hit"
   // hitChance floors at MIN_HIT_CHANCE (0.2) well before defense=14, so a
   // 0.5 roll - which would hit at the base HIT_CHANCE (0.8) - now misses.
   api.addComponent(target, 'Defense', { value: 14 });
+
+  const { resolved } = api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  assert.deepEqual(resolved.map((a) => a.type), ['Attack']);
+  assert.equal(api.getComponent(target, 'Health').current, 5);
+});
+
+test('a Boss above the enrage threshold (>50% health) attacks with no bonus', () => {
+  const { api, attacker, target } = buildCombatants([HIT_CHANCE]); // a miss at the base HIT_CHANCE, no bonus
+  api.addComponent(attacker, 'Boss', {});
+  api.addComponent(attacker, 'Health', { current: 21, max: 40 }); // above half
+
+  const { resolved } = api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  assert.deepEqual(resolved.map((a) => a.type), ['Attack']);
+  assert.equal(api.getComponent(target, 'Health').current, 5);
+});
+
+test('an enraged Boss (at or below half health) gets a hit-chance bonus', () => {
+  const { api, attacker, target } = buildCombatants([HIT_CHANCE, 0]); // misses without the bonus, hits (min damage roll) with it
+  api.addComponent(attacker, 'Boss', {});
+  api.addComponent(attacker, 'Health', { current: 20, max: 40 }); // exactly at half - enraged
+
+  api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  assert.ok(api.getComponent(target, 'Health').current < 5, 'the enrage hit-chance bonus should turn this roll into a hit');
+});
+
+test('an enraged Boss deals bonus damage on top of the normal roll', () => {
+  const { api, attacker, target } = buildCombatants([0, 0]); // hit, minimum weapon roll
+  api.addComponent(attacker, 'Boss', {});
+  api.addComponent(attacker, 'Health', { current: 10, max: 40 }); // well below half - enraged
+
+  api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  assert.equal(api.getComponent(target, 'Health').current, 5 - (WEAPON_MIN_DAMAGE + BOSS_ENRAGE_DAMAGE_BONUS));
+});
+
+test('a non-Boss entity never gets the enrage bonus, however low its health', () => {
+  const { api, attacker, target } = buildCombatants([HIT_CHANCE]); // would only hit with the enrage bonus
+  api.addComponent(attacker, 'Health', { current: 1, max: 40 }); // no Boss component
 
   const { resolved } = api.dispatch({ type: 'Attack', entity: attacker, target });
 

@@ -70,21 +70,50 @@ test('descending replaces the previous floor\'s stairs entity rather than leavin
   assert.equal(stairsEntities.length, 1);
 });
 
-test('checkForDescent reports "won" on reaching the last floor\'s stairs', () => {
-  const { api, player } = buildApiWithPlayer();
-  const floor = createFloorState(api);
-
-  for (let expectedFloor = 2; expectedFloor <= FLOOR_COUNT; expectedFloor++) {
+function descendToFloor(api, player, floor, targetFloor) {
+  for (let expectedFloor = 2; expectedFloor <= targetFloor; expectedFloor++) {
     const stairs = floor.getZone().anchors.find((anchor) => anchor.id === 'stairs');
     api.addComponent(player, 'Position', { x: stairs.x, y: stairs.y });
     const outcome = floor.checkForDescent(player);
     assert.equal(outcome, 'descended');
     assert.equal(floor.getCurrentFloor(), expectedFloor);
   }
+}
 
-  const finalStairs = floor.getZone().anchors.find((anchor) => anchor.id === 'stairs');
-  api.addComponent(player, 'Position', { x: finalStairs.x, y: finalStairs.y });
-  assert.equal(floor.checkForDescent(player), 'won');
-  // Winning doesn't generate an 11th floor.
+test('checkForDescent advances through every floor up to FLOOR_COUNT, which has a boss anchor instead of stairs', () => {
+  const { api, player } = buildApiWithPlayer();
+  const floor = createFloorState(api);
+
+  descendToFloor(api, player, floor, FLOOR_COUNT);
+
   assert.equal(floor.getCurrentFloor(), FLOOR_COUNT);
+  assert.equal(floor.getZone().anchors.find((anchor) => anchor.id === 'stairs'), undefined);
+  assert.ok(floor.getZone().anchors.find((anchor) => anchor.id === 'boss'));
+  // No stairs on the boss floor - checkForDescent is a no-op there, not a
+  // crash, regardless of where the player stands.
+  assert.equal(floor.checkForDescent(player), null);
+});
+
+test('isBossDefeated is false before FLOOR_COUNT, and false while Duke Glyphmund still lives there', () => {
+  const { api, player } = buildApiWithPlayer();
+  const floor = createFloorState(api);
+
+  assert.equal(floor.isBossDefeated(), false);
+
+  descendToFloor(api, player, floor, FLOOR_COUNT);
+
+  assert.equal(floor.isBossDefeated(), false);
+});
+
+test('isBossDefeated is true once Duke Glyphmund has been destroyed on FLOOR_COUNT', () => {
+  const { api, player } = buildApiWithPlayer();
+  const floor = createFloorState(api);
+
+  descendToFloor(api, player, floor, FLOOR_COUNT);
+
+  const [boss] = api.query(['Boss']);
+  assert.ok(boss, 'a Boss-marked entity should exist on the boss floor');
+  api.destroyEntity(boss); // simulates dieRule's real cleanup on a killing blow
+
+  assert.equal(floor.isBossDefeated(), true);
 });

@@ -69,6 +69,23 @@ function resolveHitChance(defense) {
   return Math.max(MIN_HIT_CHANCE, HIT_CHANCE - defense * DEFENSE_EVASION_PER_POINT);
 }
 
+// Duke Glyphmund's enrage phase (DESIGN.md: "base AI is Guards-style...
+// with a bespoke rule layered on top for a real boss feel"). A bump to
+// this same shared attackRule when the attacker carries Boss and is at or
+// below half health, not a second registered Attack rule - dispatch()
+// applies every matching rule's effect additively (unlike dispatchExclusive),
+// so two competing Attack rules for the same action would double-resolve
+// the same hit into two damage applications.
+export const BOSS_ENRAGE_HEALTH_RATIO = 0.5;
+export const BOSS_ENRAGE_HIT_CHANCE_BONUS = 0.15;
+export const BOSS_ENRAGE_DAMAGE_BONUS = 3;
+
+function isEnraged(ctx, entity) {
+  if (!ctx.hasComponent(entity, 'Boss')) return false;
+  const health = ctx.getComponent(entity, 'Health');
+  return health.current <= health.max * BOSS_ENRAGE_HEALTH_RATIO;
+}
+
 // Player baseline stats - no leveling/equipment exists yet (Phases 3-4),
 // so this is a fixed starting point, not the real build-variety system
 // DESIGN.md describes.
@@ -86,12 +103,17 @@ export function createAttackRule() {
     const { entity: attacker, target } = action;
     if (!ctx.hasComponent(target, 'Health')) return undefined;
 
+    const enraged = isEnraged(ctx, attacker);
     const defense = ctx.getComponent(target, 'Defense')?.value ?? 0;
-    if (ctx.rng.next() >= resolveHitChance(defense)) return undefined; // miss
+    const hitChance = enraged
+      ? Math.min(1, resolveHitChance(defense) + BOSS_ENRAGE_HIT_CHANCE_BONUS)
+      : resolveHitChance(defense);
+    if (ctx.rng.next() >= hitChance) return undefined; // miss
 
     const attack = ctx.getComponent(attacker, 'Attack')?.value ?? 0;
     const roll = WEAPON_MIN_DAMAGE + Math.floor(ctx.rng.next() * (WEAPON_MAX_DAMAGE - WEAPON_MIN_DAMAGE + 1));
-    const damage = Math.max(1, roll + attack - defense);
+    const enrageDamage = enraged ? BOSS_ENRAGE_DAMAGE_BONUS : 0;
+    const damage = Math.max(1, roll + attack + enrageDamage - defense);
 
     const health = ctx.getComponent(target, 'Health');
     const nextCurrent = Math.max(0, health.current - damage);

@@ -98,7 +98,7 @@ const keyboardSource = wireKeyboardInput({
     renderer.render(api, player, floor.getZone());
 
     if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
-    if (outcome === 'won') showWinScreen(document.getElementById('game'));
+    else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
   },
 });
 

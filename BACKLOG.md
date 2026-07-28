@@ -3,54 +3,62 @@
 ## NEXT SESSION
 
 `DESIGN.md` is complete (session 1, a `/decision-session`, 2026-07-26).
-Phase 1 ("scaffold + core loop") is complete as of this session (session
-2, 2026-07-26), across four checkpoints — see the "Implementation
-phasing" entry below for what landed, and `docs/session-logs/
-session-2-2026-07-26.md` for the full session log (this session also has
-a sibling log in `glyphrogue/docs/session-logs/session-43-2026-07-26.md`,
-per the new dual-repo convention below). The two prerequisite sessions
-flagged before Phase 2 have both landed: a `glyphrogue` session (session
-44 there, 2026-07-28) threaded `rng` through the action/rule pipeline
-(`ctx.rng`, the same live object as `api.rng`) and exported
-`isWalkableCell`; this repo's own session 4 (2026-07-28) folded both back
-in — `src/rules.js`'s `combatRng` workaround is gone in favor of the real
-`ctx.rng`, and `src/game.js`'s `isWalkableInZone`/`isOpaqueInZone` now
-delegate to the exported `isWalkableCell` instead of reinventing it
-(`cellAt` stays, still needed for `classifyTerrainCell`'s raw cell-type
-rendering lookup). See `docs/session-logs/session-4-2026-07-28.md` — no
-sibling `glyphrogue`-side log needed, this session made no changes there.
-One thing worth knowing going into Phase 2: `isOpaqueInZone`'s new
-`!isWalkableCell(...)` body is only correct because every zone today has
-exactly two cell values (wall/floor) — it stops being a safe equivalence
-the moment a cell type is both walkable and opaque (or the reverse)
-exists, which BACKLOG.md already expects no earlier than Phase 5's
-stamped event rooms, not Phase 2.
+Phase 1 ("scaffold + core loop") is complete (session 2, 2026-07-26) and
+Phase 2 ("full bestiary + boss") is complete as of this session (session
+5, 2026-07-28) — see the "Implementation phasing" entry below for what
+landed each phase.
 
-**Now Phase 2: full bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards`
-(the remaining three solo behaviors), combo enemies (multiple behavior
-markers on one entity, priority-tuned `dispatchExclusive` resolution),
-undead-skewing enemy distribution by floor depth, and Duke Glyphmund
-replacing the placeholder win floor. Kickoff research should re-verify
-any `glyphrogue` primitives this phase needs against real current code,
-same as Phase 1's kickoff did, and should also revisit `glyphrogue/
-BACKLOG.md`'s three new deferred items (move-action resolution as
-first-party content, camera/FOV/render-loop and keyboard-input wiring as
-scaffold-template boilerplate) once Phase 2 has actually happened —
-they're explicitly waiting for a second data point before being designed
-for real. `runConnectivityPass`'s export gap (below) still isn't needed
-until Phase 5.
+**Now Phase 3: Equipment & inventory** — the floor-0 loadout screen, the
+real inventory/equipment screen. Phase-end review (below) found **no
+dedicated `glyphrogue` session is needed before starting** — every
+cross-project item found during Phase 2 is either already fixed live, or
+deliberately waiting for more evidence rather than being designed off one
+data point, same posture as every other design call in this project's
+history. Kickoff research should still re-verify any `glyphrogue`
+primitives Phase 3 needs against real current code, same as every prior
+phase's kickoff.
+
+**Phase 2 close-out / phase-end review (session 5, 2026-07-28)**: three
+checkpoints — solo bestiary (rat/goblin/bandit/mouse/skeleton/wraith,
+`Defense` now also reduces hit chance); combo enemies (slime, bandit
+lookout, ghost) plus depth-gated distribution; Duke Glyphmund. Full
+writeup: `docs/session-logs/session-5-2026-07-28.md`. Per
+`.claude/dev-session.md`'s phase-end ritual:
+
+- Genuinely new candidate from this phase: `glyphrogue` has a solved
+  composition story for exclusive actions (`dispatchExclusive`) and none
+  for additive ones (`dispatch`) — three checkpoints in a row needed
+  "conditionally-scoped rule composition," and the third (Duke's enrage)
+  had no clean tool for it. Logged in this file's cross-project section
+  with full reasoning; needs its own dedicated `glyphrogue` conversation
+  to design (real engine work, not a two-line fix), not decided solo.
+  Revisit once a second data point shows up, or sooner if worth designing
+  proactively.
+- Two smaller items from this phase (the scheduler zero-cost-`TakeTurn`
+  hang, `pickEnemyType` duplicating two unexported internal `glyphrogue`
+  patterns) are both logged with a "wait for more evidence" recommendation
+  already — see this file's cross-project section.
+- The two items `glyphrogue/BACKLOG.md` explicitly deferred pending "Phase
+  2 evidence" (move-action resolution as first-party content,
+  camera/FOV/render-loop as scaffold-template boilerplate) **got no new
+  evidence this phase** — `moveRule` wasn't touched at all (every new
+  behavior still emits the same `Move` follow-on shape Phase 1 already
+  established), and `game.js`'s render loop only gained more data (new
+  archetypes' symbols/colors), not new structural requirements. Phase 2
+  turned out to be almost entirely AI-behavior/combat/floor-generation
+  territory, not camera/render/input territory. Recommend continuing to
+  defer both until a phase that actually exercises that surface again, or
+  a second real downstream `glyphrogue` game. Updated in `glyphrogue/
+  BACKLOG.md`'s own deferred-items list.
+- Everything else built this phase (the archetype table, the combat
+  formulas, floor-sequencing/win-detection state, the `Boss` marker
+  polling pattern) is explicitly glyphkeep-specific content or an
+  already-established pattern — not a promotion candidate.
 
 The GitHub remote ([Rhapsydian/glyphkeep](https://github.com/Rhapsydian/glyphkeep))
 exists, is pushed, and has Pages source set to GitHub Actions — the
 deploy pipeline is wired (`deploy-pages.yml` landed in Phase 1 checkpoint
-1) and will activate on the next push to `main`.
-
-**Session 3 (2026-07-28)** landed a small out-of-band tweak — viewport
-enlarged to 25x21 cells and the camera's `deadzone` fixed to match
-`SIGHT_RADIUS` (was clipping FOV in the direction of travel regardless of
-viewport size). Purely local to `src/game.js`, no `glyphrogue` involvement;
-doesn't change the sequencing above. Full writeup: `docs/session-logs/
-session-3-2026-07-28.md`.
+1) and activates on push to `main`.
 
 ## Implementation phasing
 
@@ -66,7 +74,14 @@ uses.
    room, a glyphkeep-authored `Attack` rule (accuracy/damage rolls against
    glyphkeep's own seeded rng, since a rule's ctx has no rng access — see
    cross-project section), and permadeath to a placeholder death screen.
-2. **Full bestiary + boss** — not started.
+2. **Full bestiary + boss** — done (session 5, 2026-07-28). Three
+   checkpoints: solo bestiary (rat/goblin/bandit/mouse/skeleton/wraith,
+   `ChasesPlayer`/`Flees`/`Guards` wired in alongside `Wanders`, `Defense`
+   now also reduces hit chance); combo enemies (slime, bandit lookout,
+   ghost) plus depth-gated distribution replacing the flat round-robin;
+   Duke Glyphmund (`Guards` movement + a bespoke enrage bump folded into
+   the shared `Attack` rule, summons cut and deferred). See the phase-end
+   review above for what did/didn't get promoted upstream.
 3. **Equipment & inventory** — not started.
 4. **Meta-progression & persistence** — not started. *(Core game complete
    at the end of this phase.)*

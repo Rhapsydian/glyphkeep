@@ -26,6 +26,7 @@ import {
   isWalkableCell,
 } from '@glyphrogue/core';
 import { createStarterFontSources, STARTER_FONT_ID, STARTER_FONT_CSS_FAMILY } from '../assets/fonts/starter-font.js';
+import { ENEMY_ARCHETYPES } from './plugins/enemy-plugin/index.js';
 
 const ENTITY_SYMBOL = 'entity';
 const PLAYER_SYMBOL = 'player';
@@ -35,9 +36,12 @@ const VIEWPORT_WIDTH = 25;
 const VIEWPORT_HEIGHT = 21;
 
 // EntityType.type -> tileset symbol, defaulting to the generic ENTITY_SYMBOL
-// for anything without its own dedicated look (torch, future enemies).
+// for anything without its own dedicated look (torch). Every enemy
+// archetype gets its own symbol (same id as its registerEntityType type),
+// derived from ENEMY_ARCHETYPES rather than hand-listed here.
 const ENTITY_SYMBOLS = {
   stairs: STAIRS_SYMBOL,
+  ...Object.fromEntries(Object.keys(ENEMY_ARCHETYPES).map((type) => [type, type])),
 };
 
 export function cellAt(zone, x, y) {
@@ -84,6 +88,13 @@ function buildTileset() {
   registerSymbol(tileset, ENTITY_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '40', foreground: { token: 'entity' } });
   registerSymbol(tileset, PLAYER_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '40', foreground: { token: 'player' } });
   registerSymbol(tileset, STAIRS_SYMBOL, { fontFace: STARTER_FONT_ID, codepoint: '3e', foreground: { token: 'stairs' } });
+  for (const [type, archetype] of Object.entries(ENEMY_ARCHETYPES)) {
+    registerSymbol(tileset, type, {
+      fontFace: STARTER_FONT_ID,
+      codepoint: archetype.char.charCodeAt(0).toString(16),
+      foreground: { token: type },
+    });
+  }
   return tileset;
 }
 
@@ -95,6 +106,7 @@ export function buildPalette() {
     player: '#e0e0e0',
     stairs: '#40c0c0',
     remembered: '#333333',
+    ...Object.fromEntries(Object.entries(ENEMY_ARCHETYPES).map(([type, archetype]) => [type, archetype.color])),
   });
 }
 

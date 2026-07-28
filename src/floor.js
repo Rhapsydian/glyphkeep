@@ -4,21 +4,25 @@
 // floor we're on" and swapping zones on descent is ordinary game-level
 // state, not something the engine needs to provide.
 import { FLOOR_COUNT } from './generators/floorGenerator.js';
+import { ENEMY_ARCHETYPES } from './plugins/enemy-plugin/index.js';
 
 function findAnchor(zone, id) {
   return zone.anchors.find((anchor) => anchor.id === id);
 }
 
-// Entity types a generated floor itself owns (stairs, wanderers) - never
-// the player. Destroying by this tag rather than a locally-tracked id list
-// is what makes generateCurrentFloor self-healing against dev-main.js's
-// HMR restore path, where floor.js's own JS-closure state doesn't survive
-// the reload but the restored ECS world's entities do (see dev-main.js's
-// own note on this).
-const FLOOR_OWNED_ENTITY_TYPES = new Set(['stairs', 'wanderer']);
+// Every enemy archetype needs a scheduler turn, not just a Position on the
+// map. Derived from ENEMY_ARCHETYPES rather than hand-listed so a new
+// archetype (checkpoint 2's combo enemies, checkpoint 3's boss) doesn't
+// need this file touched again to be scheduled correctly.
+const ACTOR_ENTITY_TYPES = new Set(Object.keys(ENEMY_ARCHETYPES));
 
-// Entity types that need a scheduler turn, not just a Position on the map.
-const ACTOR_ENTITY_TYPES = new Set(['wanderer']);
+// Entity types a generated floor itself owns (stairs, enemies) - never the
+// player. Destroying by this tag rather than a locally-tracked id list is
+// what makes generateCurrentFloor self-healing against dev-main.js's HMR
+// restore path, where floor.js's own JS-closure state doesn't survive the
+// reload but the restored ECS world's entities do (see dev-main.js's own
+// note on this).
+const FLOOR_OWNED_ENTITY_TYPES = new Set(['stairs', ...ACTOR_ENTITY_TYPES]);
 
 export function createFloorState(api) {
   let currentFloor = 1;
@@ -44,6 +48,14 @@ export function createFloorState(api) {
     for (const blueprint of zone.entities) {
       const entity = api.instantiateEntity(blueprint.type, { Position: { x: blueprint.x, y: blueprint.y } });
       if (ACTOR_ENTITY_TYPES.has(blueprint.type)) api.addActor(entity, 0);
+      // Guards needs a fixed post to return to - a registerEntityType
+      // components map is static per-archetype data with no notion of
+      // where this particular instance actually spawned, so it's seeded
+      // here instead, generically for any entity carrying a Guards
+      // component (bandit today; bandit lookout and Duke Glyphmund later).
+      if (api.hasComponent(entity, 'Guards')) {
+        api.addComponent(entity, 'Guards', { post: { x: blueprint.x, y: blueprint.y } });
+      }
     }
   }
 

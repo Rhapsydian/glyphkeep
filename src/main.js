@@ -5,6 +5,7 @@ import {
   registerMoveRule,
   registerAttackRule,
   registerDieRule,
+  registerPassFallbackRule,
   PLAYER_HEALTH,
   PLAYER_ATTACK,
   PLAYER_DEFENSE,
@@ -26,6 +27,7 @@ registerPlugins(api);
 registerMoveRule(api);
 registerAttackRule(api);
 registerDieRule(api);
+registerPassFallbackRule(api);
 
 floor = createFloorState(api);
 

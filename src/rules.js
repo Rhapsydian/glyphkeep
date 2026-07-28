@@ -51,6 +51,18 @@ export const HIT_CHANCE = 0.8;
 export const WEAPON_MIN_DAMAGE = 1;
 export const WEAPON_MAX_DAMAGE = 4;
 
+// Phase 2: Defense now does double duty (damage reduction below, and
+// accuracy reduction here) rather than adding a 4th stat just for the
+// wraith's "hard to hit" identity - DESIGN.md explicitly wants to stay lean
+// on stats. MIN_HIT_CHANCE keeps even an extremely high-Defense target
+// (the wraith) never truly unhittable.
+export const DEFENSE_EVASION_PER_POINT = 0.05;
+export const MIN_HIT_CHANCE = 0.2;
+
+function resolveHitChance(defense) {
+  return Math.max(MIN_HIT_CHANCE, HIT_CHANCE - defense * DEFENSE_EVASION_PER_POINT);
+}
+
 // Player baseline stats - no leveling/equipment exists yet (Phases 3-4),
 // so this is a fixed starting point, not the real build-variety system
 // DESIGN.md describes.
@@ -68,10 +80,10 @@ export function createAttackRule() {
     const { entity: attacker, target } = action;
     if (!ctx.hasComponent(target, 'Health')) return undefined;
 
-    if (ctx.rng.next() >= HIT_CHANCE) return undefined; // miss
+    const defense = ctx.getComponent(target, 'Defense')?.value ?? 0;
+    if (ctx.rng.next() >= resolveHitChance(defense)) return undefined; // miss
 
     const attack = ctx.getComponent(attacker, 'Attack')?.value ?? 0;
-    const defense = ctx.getComponent(target, 'Defense')?.value ?? 0;
     const roll = WEAPON_MIN_DAMAGE + Math.floor(ctx.rng.next() * (WEAPON_MAX_DAMAGE - WEAPON_MIN_DAMAGE + 1));
     const damage = Math.max(1, roll + attack - defense);
 
@@ -105,4 +117,41 @@ export function dieRule(action, ctx) {
 
 export function registerDieRule(api) {
   api.registerRule('die', 'Die', dieRule);
+}
+
+// DESIGN.md's Combat section: "uniform one action per turn for everyone."
+// glyphrogue's stock behavior rules don't guarantee this - guardsRule
+// legitimately returns undefined (no followOn) whenever its entity is
+// already at its post, which is exactly what happens on the very turn a
+// Guards-type enemy spawns (floor.js seeds Guards.post from the entity's
+// own spawn position). A TakeTurn that resolves to zero followOn spends
+// zero cost, and scheduler.next()'s tie-break keeps re-selecting that same
+// never-decreasing-budget actor forever - api.run()'s while loop hangs
+// without ever reaching the player's turn (found live: froze the dev
+// server's tab solid on the very first render). Same failure class as the
+// empty-scheduler hang already fixed in glyphrogue, but a different
+// trigger (a legitimately-idle actor, not zero actors) - flagged in
+// BACKLOG.md's cross-project section as a possible future scheduler
+// safeguard, fixed here for now as glyphkeep-authored content, same
+// framing as Move/Attack/Die already are.
+//
+// No components filter (matches every entity) and a priority below every
+// first-party behavior's (WANDERS_PRIORITY is the lowest, at 0) - so any
+// behavior that actually produced a real followOn this turn always wins
+// dispatchExclusive's resolution, and this only fires when literally
+// nothing else had anything to do.
+export const PASS_COST = 100;
+export const PASS_FALLBACK_PRIORITY = -1;
+
+function passRule() {
+  return undefined;
+}
+
+function fallbackTurnRule(action) {
+  return { followOn: [{ type: 'Pass', entity: action.entity, cost: PASS_COST }] };
+}
+
+export function registerPassFallbackRule(api) {
+  api.registerRule('pass', 'Pass', passRule);
+  api.registerRule('fallback-turn', 'TakeTurn', fallbackTurnRule, { priority: PASS_FALLBACK_PRIORITY });
 }

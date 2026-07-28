@@ -15,6 +15,9 @@
 // independent of any later connectivity pass, for a pure BSP floor with no
 // stamps). Revisit once Phase 5 adds stamped event rooms, which do need it.
 import { createZone, carveBsp } from '@glyphrogue/core';
+import { ENEMY_ARCHETYPES } from '../plugins/enemy-plugin/index.js';
+
+const ENEMY_TYPES = Object.keys(ENEMY_ARCHETYPES);
 
 export const FLOOR_WIDTH = 40;
 export const FLOOR_HEIGHT = 30;
@@ -38,12 +41,17 @@ export function floorGeneratorFn(ctx) {
   zone.anchors.push({ id: 'stairs', x: stairsRoom.center.x, y: stairsRoom.center.y });
   zone.entities.push({ type: 'stairs', x: stairsRoom.center.x, y: stairsRoom.center.y });
 
-  // One Wanders enemy per remaining room (DESIGN.md Phase 1: "one enemy
-  // (Wanders) to prove combat works") - every room except the ones already
-  // claimed by the entry and the stairs.
+  // One enemy per remaining room (every room except the ones already
+  // claimed by the entry and the stairs), round-robin across every solo
+  // archetype - checkpoint 1 only, just enough to get every new archetype
+  // spawning for verification. Checkpoint 2 replaces this with a real
+  // weighted table respecting each archetype's minFloor/maxFloor.
+  let enemyIndex = 0;
   for (const room of rooms) {
     if (room === stairsRoom || room.center === entryPoint) continue;
-    zone.entities.push({ type: 'wanderer', x: room.center.x, y: room.center.y });
+    const type = ENEMY_TYPES[enemyIndex % ENEMY_TYPES.length];
+    enemyIndex += 1;
+    zone.entities.push({ type, x: room.center.x, y: room.center.y });
   }
 
   return zone;

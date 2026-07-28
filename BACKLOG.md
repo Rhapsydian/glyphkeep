@@ -229,3 +229,40 @@ actually failed, silently — nobody had checked):
 Verified end-to-end: after both fixes, `deploy-pages` actually succeeds
 (build + deploy jobs both green), and <https://rhapsydian.github.io/glyphkeep/>
 loads the real game with no console errors or 404s.
+
+Two more found during Phase 2 checkpoint 1 (bestiary wiring), while verifying
+the new `Guards`/`ChasesPlayer`/`Flees` plugins in the real browser:
+
+- **A `TakeTurn` that legitimately resolves to no followOn spends zero
+  scheduler cost, letting `scheduler.next()`'s tie-break re-select the same
+  actor forever** — found live: floor.js seeds a `Guards` entity's `post` to
+  its own spawn position, so a freshly-spawned bandit is already "at post" on
+  turn one; `guardsRule` correctly returns `undefined` (nothing to do), but
+  `dispatchExclusive`'s resolved list is then just the bare `TakeTurn` action
+  with no `cost`, `spend()` subtracts 0, and `api.run()`'s `while
+  (!engine.locked)` loop hangs forever without ever reaching the player's
+  turn — froze the dev server's tab solid on the very first render. Same
+  failure class as session 16's empty-scheduler hang, but a different
+  trigger (a legitimately-idle actor, not zero actors). **Not fixed in
+  `glyphrogue` this session** — genuinely ambiguous where a "minimum turn
+  cost" safeguard should live (an engine-level scheduler floor, vs. a
+  content-author convention every `TakeTurn` rule needs to know about), so
+  per `.claude/dev-session.md` it's logged for its own conversation rather
+  than decided solo. Workaround: `src/rules.js`'s `registerPassFallbackRule`
+  registers a glyphkeep-authored, no-component-filter `TakeTurn` rule at
+  priority below `WANDERS_PRIORITY` that always emits a real-cost `Pass`
+  followOn — only ever wins `dispatchExclusive`'s resolution when every
+  first-party behavior rule genuinely had nothing to do that turn, matching
+  DESIGN.md's "uniform one action per turn for everyone." Regression test:
+  `test/enemyPlugin.test.js`'s "a Guards enemy already at its own post still
+  consumes its scheduler turn."
+- **The map editor's "Plugins" panel fails to dynamically import
+  `enemy-plugin/index.js`** (`Failed to fetch dynamically imported module`,
+  visible in `dev.html`'s editor sidebar). Confirmed pre-existing — the same
+  error reproduces on unmodified Phase 1 code (`git stash` back to before
+  this session's changes, same red error), so not a checkpoint 1 regression.
+  Doesn't block gameplay (the same plugin loads and works fine via
+  bootstrap.js's ordinary static import — this is only the editor's separate
+  dynamic-import-based plugin-inspection UI). Not investigated further this
+  session; worth a look whenever the map editor's Plugin management panel is
+  actually being used for something, not urgent before then.

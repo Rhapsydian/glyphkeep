@@ -71,6 +71,18 @@ test('a killing blow emits a Die follow-on and dieRule removes a non-player targ
   assert.equal(api.scheduler.actors.has(target), false);
 });
 
+test('higher Defense lowers hit chance, not just damage (wraith\'s "hard to hit" identity)', () => {
+  const { api, attacker, target } = buildCombatants([0.5]);
+  // hitChance floors at MIN_HIT_CHANCE (0.2) well before defense=14, so a
+  // 0.5 roll - which would hit at the base HIT_CHANCE (0.8) - now misses.
+  api.addComponent(target, 'Defense', { value: 14 });
+
+  const { resolved } = api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  assert.deepEqual(resolved.map((a) => a.type), ['Attack']);
+  assert.equal(api.getComponent(target, 'Health').current, 5);
+});
+
 test('dieRule does not destroy a PlayerControlled entity - the outer game loop handles player death', () => {
   const api = createApi();
   registerDieRule(api);

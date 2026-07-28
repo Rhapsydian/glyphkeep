@@ -317,3 +317,29 @@ authoring the slime archetype's "aggressive until hurt, then flees" combo:
   export, and per the review agent's own recommendation this should wait for
   a third real glyphrogue-internal consumer before designing a shared
   `pick`/`pickWeighted` helper, rather than generalizing off one data point.
+- **`glyphrogue` has a solved composition story for exclusive actions
+  (`dispatchExclusive`'s priority/component-filter resolution) and none at
+  all for additive ones (`dispatch`)** — a real pattern, not a one-off,
+  spotted by the checkpoint 3 review agent with the benefit of seeing all
+  three of this phase's checkpoints together. Checkpoints 1 and 2 both
+  needed "conditionally-scoped rule composition" for `TakeTurn` (an
+  exclusive action) and got it cleanly via tightened component filters
+  plus real priority ordering — a genuinely solved problem there. Checkpoint
+  3 needed the same shape of thing for `Attack` (an additive action, via
+  `dispatch()`, which runs and applies *every* matching rule rather than
+  picking one) and had no equivalent tool: `dispatch()`'s additive model
+  means two competing `Attack` rules would double-resolve the same hit
+  (confirmed by reading `actions.js` directly), and `registerRule`'s
+  `options.override` only supports whole-rule replacement under the same
+  id, not a scoped variant for a subset of entities. Duke Glyphmund's enrage
+  bump had to be folded directly into glyphkeep's own shared `attackRule`
+  instead (`src/rules.js`) — the only clean option available, not a
+  workaround, but real evidence of a missing engine primitive. **Not fixed
+  this session** — designing a real "rule-result modifier/decorator scoped
+  by component filter" for additive action types is genuinely new engine
+  work, not a two-line export fix, so per `.claude/dev-session.md` this
+  needs its own dedicated `glyphrogue` conversation with the user, not a
+  solo decision. Worth revisiting the next time an additive-action
+  entity-conditional need comes up (a second data point beyond Duke alone),
+  or sooner if the user wants to design it proactively given three
+  checkpoints already pointing at the same gap.

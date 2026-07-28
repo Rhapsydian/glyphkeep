@@ -30,8 +30,8 @@ const ENTITY_SYMBOL = 'entity';
 const PLAYER_SYMBOL = 'player';
 const STAIRS_SYMBOL = 'stairs';
 const SIGHT_RADIUS = 8;
-const VIEWPORT_WIDTH = 15;
-const VIEWPORT_HEIGHT = 11;
+const VIEWPORT_WIDTH = 25;
+const VIEWPORT_HEIGHT = 21;
 
 // EntityType.type -> tileset symbol, defaulting to the generic ENTITY_SYMBOL
 // for anything without its own dedicated look (torch, future enemies).
@@ -137,7 +137,10 @@ export function createRenderer(container) {
     },
     render(api, player, zone) {
       const position = api.getComponent(player, 'Position');
-      camera = updateCamera(camera, position, { deadzone: 3, mapWidth: zone.width, mapHeight: zone.height });
+      // deadzone must be >= SIGHT_RADIUS - it's the margin between the
+      // player and the viewport edge in the direction of sustained travel,
+      // so anything less clips FOV the player should be able to see ahead.
+      camera = updateCamera(camera, position, { deadzone: SIGHT_RADIUS, mapWidth: zone.width, mapHeight: zone.height });
 
       const fov = computeFov(position, SIGHT_RADIUS, { isOpaque: (x, y) => isOpaqueInZone(zone, x, y) });
       remembered = updateRemembered(remembered, fov);

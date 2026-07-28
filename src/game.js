@@ -23,6 +23,7 @@ import {
   terrainDrawCommands,
   entityDrawCommands,
   createAnimationState,
+  isWalkableCell,
 } from '@glyphrogue/core';
 import { createStarterFontSources, STARTER_FONT_ID, STARTER_FONT_CSS_FAMILY } from '../assets/fonts/starter-font.js';
 
@@ -44,13 +45,20 @@ export function cellAt(zone, x, y) {
   return zone.cells[y * zone.width + x];
 }
 
+// Delegates to @glyphrogue/core's exported isWalkableCell (session 44 there)
+// instead of reinventing the wall/floor check locally.
 export function isWalkableInZone(zone, x, y) {
-  return cellAt(zone, x, y) === 'floor';
+  return isWalkableCell(zone, x, y);
 }
 
+// Equivalent to "not walkable" only because every zone glyphkeep generates
+// today has exactly two cell values, and a wall is the sole non-walkable,
+// opaque one - walkable and opaque are different properties that just
+// coincide under today's two-cell-type model. Revisit once a cell type
+// breaks that coincidence (BACKLOG.md expects this at Phase 5's stamped
+// event rooms, not before).
 export function isOpaqueInZone(zone, x, y) {
-  const cell = cellAt(zone, x, y);
-  return cell === undefined || cell === 'wall';
+  return !isWalkableCell(zone, x, y);
 }
 
 // Pure FOV/memory classification for one terrain cell - split out from

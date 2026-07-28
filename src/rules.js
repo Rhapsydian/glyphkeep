@@ -58,24 +58,21 @@ export const PLAYER_HEALTH = 20;
 export const PLAYER_ATTACK = 5;
 export const PLAYER_DEFENSE = 2;
 
-// A rule's ctx (actions.js's createContext) has no rng access at all -
-// only a *generator*'s ctx does (mapgen.js). Flagged in BACKLOG.md's
-// cross-project section rather than fixed in glyphrogue: threading rng
-// through dispatch/engine/createContext the way mapQuery/renderEvents/
-// scheduler already are is a real architectural change, not a small
-// export fix, so it's logged for its own conversation rather than decided
-// solo. Workaround: glyphkeep keeps its own seeded rng instance (see
-// main.js/dev-main.js) and passes it into this rule directly.
-export function createAttackRule(rng) {
+// ctx.rng is real as of glyphrogue session 44 (threaded through
+// dispatch/engine/createContext the same way mapQuery/renderEvents/
+// scheduler already were) and is the exact same live object as api.rng -
+// no more separate seeded stream workaround (see BACKLOG.md's
+// cross-project section for the gap this replaced).
+export function createAttackRule() {
   return function attackRule(action, ctx) {
     const { entity: attacker, target } = action;
     if (!ctx.hasComponent(target, 'Health')) return undefined;
 
-    if (rng.next() >= HIT_CHANCE) return undefined; // miss
+    if (ctx.rng.next() >= HIT_CHANCE) return undefined; // miss
 
     const attack = ctx.getComponent(attacker, 'Attack')?.value ?? 0;
     const defense = ctx.getComponent(target, 'Defense')?.value ?? 0;
-    const roll = WEAPON_MIN_DAMAGE + Math.floor(rng.next() * (WEAPON_MAX_DAMAGE - WEAPON_MIN_DAMAGE + 1));
+    const roll = WEAPON_MIN_DAMAGE + Math.floor(ctx.rng.next() * (WEAPON_MAX_DAMAGE - WEAPON_MIN_DAMAGE + 1));
     const damage = Math.max(1, roll + attack - defense);
 
     const health = ctx.getComponent(target, 'Health');
@@ -89,8 +86,8 @@ export function createAttackRule(rng) {
   };
 }
 
-export function registerAttackRule(api, rng) {
-  api.registerRule('attack', 'Attack', createAttackRule(rng));
+export function registerAttackRule(api) {
+  api.registerRule('attack', 'Attack', createAttackRule());
 }
 
 // The player's own death is detected and handled by the outer game loop

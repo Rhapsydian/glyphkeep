@@ -3,17 +3,15 @@ import assert from 'node:assert/strict';
 import { createApi } from '@glyphrogue/core';
 import { registerAttackRule, registerDieRule, HIT_CHANCE, WEAPON_MIN_DAMAGE } from '../src/rules.js';
 
-// A scripted rng - deterministic sequences instead of a real createRng, so
-// each test controls exactly which branch (hit/miss, min/max damage roll)
-// it exercises.
-function scriptedRng(values) {
-  let index = 0;
-  return { next: () => values[index++] };
-}
-
-function buildCombatants(rng) {
+// ctx.rng is the same live object as api.rng, so a scripted deterministic
+// sequence (instead of a real seeded stream) is injected by monkey-patching
+// api.rng.next directly - each test controls exactly which branch (hit/miss,
+// min/max damage roll) it exercises.
+function buildCombatants(rngValues) {
   const api = createApi();
-  registerAttackRule(api, rng);
+  let index = 0;
+  api.rng.next = () => rngValues[index++];
+  registerAttackRule(api);
   registerDieRule(api);
 
   const attacker = api.createEntity();
@@ -27,7 +25,7 @@ function buildCombatants(rng) {
 }
 
 test('a roll at or above HIT_CHANCE is a miss - no damage, no follow-on', () => {
-  const { api, attacker, target } = buildCombatants(scriptedRng([HIT_CHANCE]));
+  const { api, attacker, target } = buildCombatants([HIT_CHANCE]);
 
   const { resolved } = api.dispatch({ type: 'Attack', entity: attacker, target });
 
@@ -36,7 +34,7 @@ test('a roll at or above HIT_CHANCE is a miss - no damage, no follow-on', () => 
 });
 
 test('a roll below HIT_CHANCE hits and applies the minimum weapon damage on a 0 damage roll', () => {
-  const { api, attacker, target } = buildCombatants(scriptedRng([0, 0]));
+  const { api, attacker, target } = buildCombatants([0, 0]);
 
   api.dispatch({ type: 'Attack', entity: attacker, target });
 
@@ -44,7 +42,7 @@ test('a roll below HIT_CHANCE hits and applies the minimum weapon damage on a 0 
 });
 
 test('damage is never less than 1, even when Defense would otherwise zero it out', () => {
-  const { api, attacker, target } = buildCombatants(scriptedRng([0, 0]));
+  const { api, attacker, target } = buildCombatants([0, 0]);
   api.addComponent(target, 'Defense', { value: 99 });
 
   api.dispatch({ type: 'Attack', entity: attacker, target });
@@ -53,7 +51,7 @@ test('damage is never less than 1, even when Defense would otherwise zero it out
 });
 
 test('Attack/Defense stats shift damage up or down around the weapon roll', () => {
-  const { api, attacker, target } = buildCombatants(scriptedRng([0, 0]));
+  const { api, attacker, target } = buildCombatants([0, 0]);
   api.addComponent(attacker, 'Attack', { value: 3 });
 
   api.dispatch({ type: 'Attack', entity: attacker, target });
@@ -62,8 +60,7 @@ test('Attack/Defense stats shift damage up or down around the weapon roll', () =
 });
 
 test('a killing blow emits a Die follow-on and dieRule removes a non-player target from the world', () => {
-  const rng = scriptedRng([0, 1]); // hit, max damage roll
-  const { api, attacker, target } = buildCombatants(rng);
+  const { api, attacker, target } = buildCombatants([0, 1]); // hit, max damage roll
   api.addComponent(target, 'Health', { current: 1, max: 5 });
   api.addActor(target, 50);
 

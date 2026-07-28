@@ -1,5 +1,5 @@
 import { unmount } from 'svelte';
-import { createApi, createRng, createLocalStorageBackend } from '@glyphrogue/core';
+import { createApi, createLocalStorageBackend } from '@glyphrogue/core';
 import { mountEditor } from '@glyphrogue/editor';
 import { snapshotWorld, restoreWorldFromSnapshot } from '@glyphrogue/editor/hotReload';
 import { registerPlugins } from '../bootstrap.js';
@@ -41,11 +41,7 @@ const api = restored ?? createApi(mapQuery);
 // round-tripped world data, so this has to run every time, restored or not.
 registerPlugins(api);
 registerMoveRule(api);
-// A rule's ctx has no rng access (BACKLOG.md's cross-project section) -
-// combatRng is glyphkeep's own stream, seeded from the world's own seed so
-// it's still deterministic per run, just not literally api.rng itself.
-const combatRng = createRng(api.rng.state);
-registerAttackRule(api, combatRng);
+registerAttackRule(api);
 registerDieRule(api);
 
 // floor.js's own currentFloor/zone bookkeeping is plain JS-closure state,

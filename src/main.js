@@ -1,4 +1,4 @@
-import { createApi, createRng } from '@glyphrogue/core';
+import { createApi } from '@glyphrogue/core';
 import { registerPlugins } from '../bootstrap.js';
 import { createRenderer, isWalkableInZone, isOpaqueInZone } from './game.js';
 import {
@@ -24,11 +24,7 @@ const api = createApi({
 });
 registerPlugins(api);
 registerMoveRule(api);
-// A rule's ctx has no rng access (BACKLOG.md's cross-project section) -
-// combatRng is glyphkeep's own stream, seeded from the world's own seed so
-// it's still deterministic per run, just not literally api.rng itself.
-const combatRng = createRng(api.rng.state);
-registerAttackRule(api, combatRng);
+registerAttackRule(api);
 registerDieRule(api);
 
 floor = createFloorState(api);

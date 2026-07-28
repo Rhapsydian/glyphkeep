@@ -292,3 +292,15 @@ authoring the slime archetype's "aggressive until hurt, then flees" combo:
   exported `DEFAULT_MOVE_COST` instead. Only `wandersRule`/`chasesPlayerRule`/
   `guardsRule` stay unexported for now (nothing in glyphkeep needs a
   tightened filter around those yet — export them too if that changes).
+- **`floorGenerator.js`'s `pickEnemyType` reinvents "pick from a candidate
+  pool via the seeded rng"** (found via the checkpoint 2 background review
+  pass) — `glyphrogue` itself already has two independent, unexported
+  implementations of essentially the same thing (`layeredBiome.js`'s
+  `weightedPick`, `waveFunctionCollapse.js`'s `pickWeighted`), neither ever
+  extracted into a shared, exported primitive. Three separate
+  implementations of the same pattern now exist across both repos. **Not
+  fixed this session** — the gap lives in `glyphrogue`'s own `rng.js`/
+  `zoneComposition.js`, not something glyphkeep can resolve by consuming an
+  export, and per the review agent's own recommendation this should wait for
+  a third real glyphrogue-internal consumer before designing a shared
+  `pick`/`pickWeighted` helper, rather than generalizing off one data point.

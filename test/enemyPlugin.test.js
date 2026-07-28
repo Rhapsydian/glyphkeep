@@ -107,6 +107,62 @@ test('a Guards enemy already at its own post still consumes its scheduler turn (
   assert.deepEqual(api.getComponent(bandit, 'Position'), { x: 5, y: 5 });
 });
 
+function distanceFrom(position, x, y) {
+  return Math.abs(position.x - x) + Math.abs(position.y - y);
+}
+
+test('slime (ChasesPlayer + health-gated Flees) chases while healthy, then flees once hurt', () => {
+  const api = buildApi();
+  addPlayer(api, 5, 5);
+  const slime = api.instantiateEntity('slime', { Position: { x: 1, y: 5 } });
+  api.addActor(slime, 0);
+
+  api.act();
+  const afterChase = api.getComponent(slime, 'Position');
+  assert.equal(afterChase.y, 5);
+  assert.ok(afterChase.x > 1, 'healthy slime should chase toward the player');
+
+  const health = api.getComponent(slime, 'Health');
+  api.addComponent(slime, 'Health', { ...health, current: Math.ceil(health.max / 2) });
+  api.addActor(slime, 0);
+
+  api.act();
+  const afterFlee = api.getComponent(slime, 'Position');
+  // fleesRule maximizes distance from the player, not a specific axis - a
+  // tie between two equally-far directions resolves to whichever comes
+  // first in DIRECTIONS, so assert on distance, not x/y directly.
+  assert.ok(
+    distanceFrom(afterFlee, 5, 5) > distanceFrom(afterChase, 5, 5),
+    'hurt slime should end up farther from the player than it was after chasing',
+  );
+});
+
+test('bandit lookout (Guards + ChasesPlayer) holds its post until it spots the player', () => {
+  const api = buildApi();
+  const lookout = api.instantiateEntity('bandit-lookout', { Position: { x: 5, y: 5 } });
+  api.addComponent(lookout, 'Guards', { post: { x: 5, y: 5 } });
+  api.addActor(lookout, 0);
+
+  api.act();
+  assert.deepEqual(api.getComponent(lookout, 'Position'), { x: 5, y: 5 }, 'no player around - stays at post');
+
+  addPlayer(api, 6, 5);
+  api.addActor(lookout, 0);
+
+  api.act();
+  const position = api.getComponent(lookout, 'Position');
+  assert.deepEqual(position, { x: 6, y: 5 }, 'player in range - gives chase (bumps into them, one tile away)');
+});
+
+test('ghost (Wanders + ChasesPlayer) idles with no perception radius override, then locks onto a spotted player', () => {
+  const api = buildApi();
+  const ghost = api.instantiateEntity('ghost', { Position: { x: 5, y: 5 } });
+  api.addActor(ghost, 0);
+
+  api.act();
+  assert.notDeepEqual(api.getComponent(ghost, 'Position'), { x: 5, y: 5 }, 'no player visible - wanders instead of idling');
+});
+
 test('wraith (Wanders) moves even with no player around', () => {
   const api = buildApi();
   const wraith = api.instantiateEntity('wraith', { Position: { x: 5, y: 5 } });

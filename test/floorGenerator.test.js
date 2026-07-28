@@ -66,11 +66,35 @@ test('enemies are placed on real floor cells, never on the entry or stairs cells
   }
 });
 
-test('every solo archetype appears somewhere across a floor with enough rooms', () => {
-  const zone = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-1' });
-  const spawnedTypes = new Set(zone.entities.map((entity) => entity.type));
-
-  for (const type of Object.keys(ENEMY_ARCHETYPES)) {
-    assert.ok(spawnedTypes.has(type), `expected ${type} to spawn on floor-1`);
+test('every spawned enemy is within its own archetype\'s minFloor/maxFloor range for the requested depth', () => {
+  for (const depth of [1, 5, 10]) {
+    const zone = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: `floor-${depth}`, params: { depth } });
+    for (const entity of zone.entities) {
+      const archetype = ENEMY_ARCHETYPES[entity.type];
+      if (!archetype) continue; // 'stairs' isn't a bestiary archetype
+      assert.ok(
+        depth >= archetype.minFloor && depth <= archetype.maxFloor,
+        `${entity.type} shouldn't spawn on floor ${depth} (range ${archetype.minFloor}-${archetype.maxFloor})`,
+      );
+    }
   }
+});
+
+test('undead archetypes never spawn on the shallowest floor, and shallow-only archetypes never spawn on the deepest', () => {
+  const shallow = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-1', params: { depth: 1 } });
+  const shallowTypes = new Set(shallow.entities.map((entity) => entity.type));
+  assert.equal(shallowTypes.has('skeleton'), false);
+  assert.equal(shallowTypes.has('wraith'), false);
+
+  const deep = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-10', params: { depth: 10 } });
+  const deepTypes = new Set(deep.entities.map((entity) => entity.type));
+  assert.equal(deepTypes.has('wanderer'), false);
+  assert.equal(deepTypes.has('mouse'), false);
+});
+
+test('the same (worldSeed, zoneId, depth) reproduces an identical enemy distribution', () => {
+  const first = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-5', params: { depth: 5 } });
+  const second = buildApi().generateZone({ generatorId: 'glyphkeep-floor', zoneId: 'floor-5', params: { depth: 5 } });
+
+  assert.deepEqual(first, second);
 });

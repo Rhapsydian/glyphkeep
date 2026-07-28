@@ -17,8 +17,6 @@
 import { createZone, carveBsp } from '@glyphrogue/core';
 import { ENEMY_ARCHETYPES } from '../plugins/enemy-plugin/index.js';
 
-const ENEMY_TYPES = Object.keys(ENEMY_ARCHETYPES);
-
 export const FLOOR_WIDTH = 40;
 export const FLOOR_HEIGHT = 30;
 export const FLOOR_COUNT = 10;
@@ -30,8 +28,26 @@ function farthestRoom(rooms, from) {
   }, undefined).room;
 }
 
+// Undead-skewing distribution (DESIGN.md's bestiary section) falls out of
+// each archetype's own minFloor/maxFloor range rather than a separate
+// weight column - undead archetypes simply aren't eligible until floor 4+,
+// which is the actual skew. Uniform pick among whatever's eligible at a
+// given depth; revisit with real per-archetype weights only if playtesting
+// shows the skew needs to be stronger than range-gating alone provides.
+function eligibleArchetypes(depth) {
+  return Object.entries(ENEMY_ARCHETYPES).filter(
+    ([, archetype]) => depth >= archetype.minFloor && depth <= archetype.maxFloor,
+  );
+}
+
+function pickEnemyType(rng, depth) {
+  const eligible = eligibleArchetypes(depth);
+  const [type] = eligible[Math.floor(rng.next() * eligible.length)];
+  return type;
+}
+
 export function floorGeneratorFn(ctx) {
-  const { width, height, minPartitionSize, roomMargin } = ctx.params ?? {};
+  const { width, height, minPartitionSize, roomMargin, depth = 1 } = ctx.params ?? {};
   const zone = createZone(width, height);
   const { rooms, entryPoint } = carveBsp(zone, ctx.rng, { minPartitionSize, roomMargin });
 
@@ -42,15 +58,11 @@ export function floorGeneratorFn(ctx) {
   zone.entities.push({ type: 'stairs', x: stairsRoom.center.x, y: stairsRoom.center.y });
 
   // One enemy per remaining room (every room except the ones already
-  // claimed by the entry and the stairs), round-robin across every solo
-  // archetype - checkpoint 1 only, just enough to get every new archetype
-  // spawning for verification. Checkpoint 2 replaces this with a real
-  // weighted table respecting each archetype's minFloor/maxFloor.
-  let enemyIndex = 0;
+  // claimed by the entry and the stairs), picked per-depth so the bestiary
+  // actually varies floor to floor.
   for (const room of rooms) {
     if (room === stairsRoom || room.center === entryPoint) continue;
-    const type = ENEMY_TYPES[enemyIndex % ENEMY_TYPES.length];
-    enemyIndex += 1;
+    const type = pickEnemyType(ctx.rng, depth);
     zone.entities.push({ type, x: room.center.x, y: room.center.y });
   }
 

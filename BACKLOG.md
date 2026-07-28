@@ -266,3 +266,29 @@ the new `Guards`/`ChasesPlayer`/`Flees` plugins in the real browser:
   dynamic-import-based plugin-inspection UI). Not investigated further this
   session; worth a look whenever the map editor's Plugin management panel is
   actually being used for something, not urgent before then.
+
+One more found during Phase 2 checkpoint 2 (combo enemies + distribution),
+authoring the slime archetype's "aggressive until hurt, then flees" combo:
+
+- **`fleesRule`/`chasesPlayerRule`/`wandersRule`/`guardsRule` (`behaviors.js`)
+  and their priority constants (`FLEES_PRIORITY` etc.) and
+  `DEFAULT_MOVE_COST` were never re-exported from `index.js`** — only the
+  four pre-wrapped plugins (each baking in a fixed, unconditional
+  `components: { all: [Marker] }` filter) were public. Blocked slime's combo
+  directly: reusing the real, tested flee-movement logic with a *tighter*
+  filter (marker present AND health at/below half) needed the raw
+  `fleesRule` function, and correctly composing with the real priority
+  ordering needed `FLEES_PRIORITY` rather than a hardcoded magic number.
+  Small, unambiguous, same class as the earlier `computeFov`/`isWalkableCell`
+  export fixes — fixed same-session directly in `glyphrogue`
+  (`packages/core/src/index.js`, exporting `fleesRule` and all four
+  priority constants), with regression tests in
+  `packages/core/test/index.test.js`. Bundled in the same fix:
+  `DEFAULT_MOVE_COST` was also unexported, and glyphkeep's own `rules.js`
+  had independently redeclared the same "100" twice (`MOVE_COST` for the
+  player's move, `PASS_COST` for the Phase 2 checkpoint 1 scheduler-hang
+  fallback) purely because there was no way to reference the real constant
+  either was meant to stay in lockstep with — both now derive from the
+  exported `DEFAULT_MOVE_COST` instead. Only `wandersRule`/`chasesPlayerRule`/
+  `guardsRule` stay unexported for now (nothing in glyphkeep needs a
+  tightened filter around those yet — export them too if that changes).

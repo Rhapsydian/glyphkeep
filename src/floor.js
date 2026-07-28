@@ -44,7 +44,11 @@ export function createFloorState(api) {
   function generateCurrentFloor() {
     clearFloorOwnedEntities();
 
-    zone = api.generateZone({ generatorId: 'glyphkeep-floor', zoneId: `floor-${currentFloor}` });
+    zone = api.generateZone({
+      generatorId: 'glyphkeep-floor',
+      zoneId: `floor-${currentFloor}`,
+      params: { depth: currentFloor },
+    });
     for (const blueprint of zone.entities) {
       const entity = api.instantiateEntity(blueprint.type, { Position: { x: blueprint.x, y: blueprint.y } });
       if (ACTOR_ENTITY_TYPES.has(blueprint.type)) api.addActor(entity, 0);

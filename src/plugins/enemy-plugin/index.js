@@ -1,4 +1,4 @@
-import { CORE_API_VERSION } from '@glyphrogue/core';
+import { CORE_API_VERSION, fleesRule, FLEES_PRIORITY } from '@glyphrogue/core';
 
 // DESIGN.md's bestiary (Phase 2 roster, resolved live with the user -
 // BACKLOG.md's NEXT SESSION pointer). Each archetype pairs one of
@@ -18,9 +18,30 @@ import { CORE_API_VERSION } from '@glyphrogue/core';
 // seeds it at instantiation time instead, generically for any entity
 // carrying a Guards component.
 //
-// minFloor/maxFloor aren't consumed yet (checkpoint 1 spawns a flat
-// round-robin across all archetypes) - checkpoint 2's weighted
-// depth-based distribution reads them directly from this same table.
+// minFloor/maxFloor feed floorGenerator.js's weighted depth-based
+// distribution.
+//
+// Two combo archetypes (bandit lookout, ghost) are pure compositions of
+// two stock marker components each - no custom rule needed, since
+// dispatchExclusive's priority resolution already gives the right emergent
+// behavior for free (e.g. ghost: Wanders while the player's out of sight,
+// ChasesPlayer once spotted, since chasesPlayerRule no-ops - falling
+// through to the lower-priority wandersRule - whenever the player isn't
+// visible).
+//
+// Slime is the one combo that needs real custom content: "aggressive until
+// hurt, then flees" needs Flees to be health-gated, but the stock
+// fleesPlugin (loaded globally in bootstrap.js) matches ANY entity with a
+// bare `Flees` component, unconditionally - giving slime a real `Flees`
+// component would make that stock rule ALSO match and win priority ties
+// (it's loaded before enemyPlugin), completely defeating the gating. So
+// slime instead carries a glyphkeep-only `FleesWhenHurt` marker (never
+// registered anywhere as a component the stock plugin's `all: ['Flees']`
+// filter can see) and register() below wires a slime-only rule reusing the
+// real, exported `fleesRule` with a tightened filter (marker present AND
+// health at/below half). fleesRule's own body reads radius from a `Flees`
+// component that slime never has, which is fine - it defaults to 8 the
+// same way every other Flees-behavior entity does unless it overrides it.
 export const ENEMY_ARCHETYPES = {
   // Cosmetically "rat" - id kept as the Phase 1 name to avoid a needless
   // rename across floorGenerator.js/floor.js/tests.
@@ -60,6 +81,24 @@ export const ENEMY_ARCHETYPES = {
     char: 'w', color: '#8090c0',
     minFloor: 5, maxFloor: 10,
   },
+  slime: {
+    health: 12, attack: 4, defense: 1,
+    components: { ChasesPlayer: {}, FleesWhenHurt: {} },
+    char: 's', color: '#30c080',
+    minFloor: 2, maxFloor: 7,
+  },
+  'bandit-lookout': {
+    health: 12, attack: 4, defense: 2,
+    components: { Guards: {}, ChasesPlayer: {} },
+    char: 'B', color: '#e0a030',
+    minFloor: 3, maxFloor: 7,
+  },
+  ghost: {
+    health: 10, attack: 5, defense: 1,
+    components: { Wanders: {}, ChasesPlayer: {} },
+    char: 'G', color: '#a0e0ff',
+    minFloor: 4, maxFloor: 8,
+  },
 };
 
 export default {
@@ -78,5 +117,15 @@ export default {
         },
       });
     }
+
+    // Slime's "aggressive until hurt, then flees" - see the table comment
+    // above for why this can't just be the stock fleesPlugin.
+    const slimeFleeThreshold = Math.ceil(ENEMY_ARCHETYPES.slime.health / 2);
+    api.registerRule('slime-flees', 'TakeTurn', fleesRule, {
+      priority: FLEES_PRIORITY,
+      components: {
+        all: ['FleesWhenHurt', { component: 'Health', lte: { current: slimeFleeThreshold } }],
+      },
+    });
   },
 };

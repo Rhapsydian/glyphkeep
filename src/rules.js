@@ -5,8 +5,14 @@
 // every AI behavior (wandersRule etc.) emits a {type: 'Move', entity, to,
 // cost} followOn, but nothing in core ever resolves it into a real
 // Position update. This is that resolver.
+import { DEFAULT_MOVE_COST, WANDERS_PRIORITY } from '@glyphrogue/core';
 
-export const MOVE_COST = 100;
+// The player's own move cost has to equal every behavior rule's move cost
+// (DEFAULT_MOVE_COST) for "uniform one action per turn" to actually hold -
+// derived from the real engine constant, not independently redeclared
+// (glyphrogue session: this used to be a second, separately-arrived-at
+// "100" here).
+export const MOVE_COST = DEFAULT_MOVE_COST;
 
 function entityAt(ctx, x, y, excluding) {
   return ctx
@@ -136,12 +142,13 @@ export function registerDieRule(api) {
 // framing as Move/Attack/Die already are.
 //
 // No components filter (matches every entity) and a priority below every
-// first-party behavior's (WANDERS_PRIORITY is the lowest, at 0) - so any
-// behavior that actually produced a real followOn this turn always wins
-// dispatchExclusive's resolution, and this only fires when literally
-// nothing else had anything to do.
-export const PASS_COST = 100;
-export const PASS_FALLBACK_PRIORITY = -1;
+// first-party behavior's (derived from the real WANDERS_PRIORITY, the
+// lowest of the four, rather than a bare -1 that silently drifts if that
+// ordering is ever retuned) - so any behavior that actually produced a real
+// followOn this turn always wins dispatchExclusive's resolution, and this
+// only fires when literally nothing else had anything to do.
+export const PASS_COST = DEFAULT_MOVE_COST;
+export const PASS_FALLBACK_PRIORITY = WANDERS_PRIORITY - 1;
 
 function passRule() {
   return undefined;

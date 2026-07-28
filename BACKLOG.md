@@ -48,6 +48,13 @@ exists, is pushed, and has Pages source set to GitHub Actions — the
 deploy pipeline is wired (`deploy-pages.yml` landed in Phase 1 checkpoint
 1) and will activate on the next push to `main`.
 
+**Session 3 (2026-07-28)** landed a small out-of-band tweak — viewport
+enlarged to 25x21 cells and the camera's `deadzone` fixed to match
+`SIGHT_RADIUS` (was clipping FOV in the direction of travel regardless of
+viewport size). Purely local to `src/game.js`, no `glyphrogue` involvement;
+doesn't change the sequencing above. Full writeup: `docs/session-logs/
+session-3-2026-07-28.md`.
+
 ## Implementation phasing
 
 Dependency-ordered, from `DESIGN.md`'s "Implementation phasing" section.

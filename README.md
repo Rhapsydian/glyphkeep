@@ -11,16 +11,18 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 
 ## Status
 
-Phase 1 ("scaffold + core loop") is complete — floors 1-10 generate for
-real (BSP), the player moves and fights with real keyboard input, one
-enemy type (`Wanders`) populates every floor, and reaching floor 10 (or
-dying) shows a placeholder end screen. The two sessions gating Phase 2
-have both landed: a `glyphrogue` engine session threading `ctx.rng`
-through the rule pipeline and exporting `isWalkableCell`, and this
-repo's own fold-back session retiring the `combatRng`/`isWalkableInZone`
-workarounds those two gaps had forced. Next up: Phase 2 (full bestiary +
-boss) — see [`BACKLOG.md`](BACKLOG.md) for the full sequencing and the
-phased build plan.
+Phase 1 ("scaffold + core loop") and Phase 2 ("full bestiary + boss") are
+both complete. Floors 1-10 generate for real (BSP), the player moves and
+fights with real keyboard input, and the bestiary is fully populated with
+undead-skewing depth-gated distribution: rat, goblin, bandit, mouse,
+skeleton, and wraith (one per first-party AI behavior, `Defense` doubling
+as evasion), plus three combo enemies (slime, bandit lookout, ghost)
+combining two behaviors each via priority-tuned `dispatchExclusive`.
+Reaching floor 10 places Duke Glyphmund, a real final boss (`Guards`
+movement plus a bespoke enrage phase past half health) — defeating him
+wins the run; dying shows a placeholder death screen either way. Next up:
+Phase 3 (equipment & inventory) — see [`BACKLOG.md`](BACKLOG.md) for the
+full sequencing and the phased build plan.
 
 ## Getting started
 

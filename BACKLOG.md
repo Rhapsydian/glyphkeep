@@ -8,28 +8,25 @@ Phase 1 ("scaffold + core loop") is complete as of this session (session
 phasing" entry below for what landed, and `docs/session-logs/
 session-2-2026-07-26.md` for the full session log (this session also has
 a sibling log in `glyphrogue/docs/session-logs/session-43-2026-07-26.md`,
-per the new dual-repo convention below). Phase 2 is scoped and ready, but
-**two sessions come first, in order, before Phase 2 starts**:
+per the new dual-repo convention below). The two prerequisite sessions
+flagged before Phase 2 have both landed: a `glyphrogue` session (session
+44 there, 2026-07-28) threaded `rng` through the action/rule pipeline
+(`ctx.rng`, the same live object as `api.rng`) and exported
+`isWalkableCell`; this repo's own session 4 (2026-07-28) folded both back
+in — `src/rules.js`'s `combatRng` workaround is gone in favor of the real
+`ctx.rng`, and `src/game.js`'s `isWalkableInZone`/`isOpaqueInZone` now
+delegate to the exported `isWalkableCell` instead of reinventing it
+(`cellAt` stays, still needed for `classifyTerrainCell`'s raw cell-type
+rendering lookup). See `docs/session-logs/session-4-2026-07-28.md` — no
+sibling `glyphrogue`-side log needed, this session made no changes there.
+One thing worth knowing going into Phase 2: `isOpaqueInZone`'s new
+`!isWalkableCell(...)` body is only correct because every zone today has
+exactly two cell values (wall/floor) — it stops being a safe equivalence
+the moment a cell type is both walkable and opaque (or the reverse)
+exists, which BACKLOG.md already expects no earlier than Phase 5's
+stamped event rooms, not Phase 2.
 
-1. **A `glyphrogue` session** (see `glyphrogue/BACKLOG.md`'s NEXT SESSION
-   section) — threads `rng` through the action/rule pipeline (`ctx.rng`,
-   mirroring the generator ctx's shape) so a rule can roll against the
-   real seeded stream instead of a rule having no rng access at all, plus
-   a bundled `isWalkableCell` export fix. Scoped as its own session rather
-   than fixed live this session because it's a real architectural change
-   (`createContext`/`dispatch`/`dispatchExclusive`/`createEngine`), not a
-   small export addition — see the "rule's `ctx` has no RNG access"
-   cross-project entry below for the full writeup.
-2. **A glyphkeep fold-back session, immediately after** — swaps
-   `src/rules.js`'s `combatRng` workaround (a second, separate seeded
-   stream) for the real `ctx.rng` once it exists, and swaps
-   `src/game.js`'s `isWalkableInZone`/`isOpaqueInZone`/`cellAt` trio for
-   the newly-exported `isWalkableCell` (or equivalent) instead of the
-   locally-reinvented versions. Keeps glyphkeep current as glyphrogue's
-   reference downstream consumer rather than carrying workaround debt
-   into Phase 2.
-
-**Then Phase 2: full bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards`
+**Now Phase 2: full bestiary + boss** — `ChasesPlayer`/`Flees`/`Guards`
 (the remaining three solo behaviors), combo enemies (multiple behavior
 markers on one entity, priority-tuned `dispatchExclusive` resolution),
 undead-skewing enemy distribution by floor depth, and Duke Glyphmund

@@ -14,8 +14,11 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 Phase 1 ("scaffold + core loop") is complete — floors 1-10 generate for
 real (BSP), the player moves and fights with real keyboard input, one
 enemy type (`Wanders`) populates every floor, and reaching floor 10 (or
-dying) shows a placeholder end screen. Next up: a `glyphrogue` engine
-session plus a glyphkeep fold-back session, then Phase 2 (full bestiary +
+dying) shows a placeholder end screen. The two sessions gating Phase 2
+have both landed: a `glyphrogue` engine session threading `ctx.rng`
+through the rule pipeline and exporting `isWalkableCell`, and this
+repo's own fold-back session retiring the `combatRng`/`isWalkableInZone`
+workarounds those two gaps had forced. Next up: Phase 2 (full bestiary +
 boss) — see [`BACKLOG.md`](BACKLOG.md) for the full sequencing and the
 phased build plan.
 

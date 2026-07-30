@@ -11,6 +11,7 @@ import {
   PLAYER_DEFENSE,
 } from './rules.js';
 import { registerEquipmentRules } from './equipment.js';
+import { registerLoadoutScreen, runLoadoutScreen } from './loadoutScreen.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
 import { showWinScreen, showDeathScreen } from './screens.js';
@@ -30,6 +31,7 @@ registerAttackRule(api);
 registerDieRule(api);
 registerPassFallbackRule(api);
 registerEquipmentRules(api);
+registerLoadoutScreen(api);
 
 floor = createFloorState(api);
 
@@ -41,33 +43,43 @@ api.addComponent(player, 'Defense', { value: PLAYER_DEFENSE });
 api.addComponent(player, 'Equipment', { weaponId: null, armorId: null });
 api.addComponent(player, 'Inventory', { itemIds: [] });
 api.addActor(player, 0);
-floor.placePlayerAtEntry(player);
 
-const renderer = createRenderer(document.getElementById('game'));
+// Decision 1 (Phase 3 plan): no walkable floor-0 zone this phase - the
+// loadout screen is a pure UI screen shown once at game start, before the
+// renderer/input boot tail below (finishBoot) ever runs. Player must
+// already be a registered scheduler actor (addActor above) before
+// runLoadoutScreen's api.closeScreen call - see loadoutScreen.js's comment.
+function finishBoot() {
+  floor.placePlayerAtEntry(player);
 
-// Locks the engine waiting for the player's first move (no other actors
-// exist yet to take a turn first).
-api.run();
-renderer.render(api, player, floor.getZone());
+  const renderer = createRenderer(document.getElementById('game'));
 
-wireKeyboardInput({
-  target: window,
-  api,
-  player,
-  onMove: () => {
-    const dead = api.getComponent(player, 'Health').current <= 0;
-    // Death takes priority over descent - checked first, but still render
-    // the actual final frame before overlaying either placeholder screen,
-    // rather than freezing on the previous turn's stale canvas.
-    const outcome = dead ? null : floor.checkForDescent(player);
-    if (outcome === 'descended') renderer.resetZone();
+  // Locks the engine waiting for the player's first move (no other actors
+  // exist yet to take a turn first).
+  api.run();
+  renderer.render(api, player, floor.getZone());
 
-    renderer.render(api, player, floor.getZone());
+  wireKeyboardInput({
+    target: window,
+    api,
+    player,
+    onMove: () => {
+      const dead = api.getComponent(player, 'Health').current <= 0;
+      // Death takes priority over descent - checked first, but still render
+      // the actual final frame before overlaying either placeholder screen,
+      // rather than freezing on the previous turn's stale canvas.
+      const outcome = dead ? null : floor.checkForDescent(player);
+      if (outcome === 'descended') renderer.resetZone();
 
-    if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
-    else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
-  },
-});
+      renderer.render(api, player, floor.getZone());
+
+      if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
+      else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
+    },
+  });
+}
+
+runLoadoutScreen({ api, player, container: document.getElementById('game'), onComplete: finishBoot });
 
 // Handy for poking at the live world from devtools during local testing.
 window.__game = api;

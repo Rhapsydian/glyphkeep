@@ -358,3 +358,23 @@ authoring the slime archetype's "aggressive until hurt, then flees" combo:
   entity-conditional need comes up (a second data point beyond Duke alone),
   or sooner if the user wants to design it proactively given three
   checkpoints already pointing at the same gap.
+
+One more found during Phase 3 checkpoint 2 (loadout screen), while wiring
+`api.closeScreen`/`resolvePlayerAction`:
+
+- **`scheduler.js`'s `spend(scheduler, entity, cost)` has no guard for an
+  unregistered entity** — `scheduler.actors.get(entity) - cost` silently
+  produces `NaN` and corrupts the map if `entity` was never `addActor`'d.
+  Already half-noticed: `engine.js`'s own comment on the earlier
+  empty-scheduler fix explicitly says "spend() has no existing-actor guard
+  either," but that session only guarded `act()`'s `entity === undefined`
+  case, not `spend()` itself — so any *other* caller passing a valid but
+  unregistered entity (this session's `closeScreen`/`resolvePlayerAction`
+  path) still hits the same corruption class. Small, unambiguous, same
+  shape as every other same-session fix this project has made — fixed
+  directly in `glyphrogue` (`spend()` now throws instead of corrupting
+  state when given an unregistered entity), with a regression test in
+  `packages/core/test/scheduler.test.js`. Not currently reachable in
+  glyphkeep's own code (Phase 3's `closeScreen` call sites are ordered
+  after `addActor`), so this is defense-in-depth against a reordering
+  mistake, not a fix for an active bug.

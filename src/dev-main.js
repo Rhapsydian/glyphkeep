@@ -14,6 +14,7 @@ import {
   PLAYER_DEFENSE,
 } from './rules.js';
 import { registerEquipmentRules } from './equipment.js';
+import { registerLoadoutScreen, runLoadoutScreen } from './loadoutScreen.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
 import { showWinScreen, showDeathScreen } from './screens.js';
@@ -47,6 +48,7 @@ registerAttackRule(api);
 registerDieRule(api);
 registerPassFallbackRule(api);
 registerEquipmentRules(api);
+registerLoadoutScreen(api);
 
 // floor.js's own currentFloor/zone bookkeeping is plain JS-closure state,
 // not part of the save DTO's game slice (this harness doesn't wire
@@ -74,37 +76,58 @@ const player = restored
       api.addActor(entity, 0);
       return entity;
     })();
-floor.placePlayerAtEntry(player);
 
-const renderer = createRenderer(document.getElementById('game'));
+// Assigned inside finishBoot - undefined until then, so a mid-loadout HMR
+// dispose (below) can't call .stop() on it. keyboardSource?.stop() handles
+// that gap; a stray PendingUI in the restored snapshot with nothing to
+// re-show it is an accepted dev-only gap (BACKLOG.md), not a shipped-game
+// concern.
+let keyboardSource;
 
-// engine.locked itself isn't part of the serialized DTO either (it's
-// transient UI-wait state, not simulation state) - run() re-derives it
-// correctly either way: on a genuine cold start it locks waiting for the
-// player's first move, on a restore it fast-forwards any actors whose turn
-// was already due (none, in practice - a snapshot only ever happens while
-// already locked waiting for the player) and re-locks the same way.
-api.run();
-renderer.render(api, player, floor.getZone());
+// Decision 1 (Phase 3 plan): no walkable floor-0 zone this phase - the
+// loadout screen is a pure UI screen shown once at game start, before this
+// renderer/input boot tail ever runs. A restored snapshot already has
+// whatever loadout state it had (Position/Equipment/Inventory round-trip
+// through the DTO), so it skips straight to finishBoot instead.
+function finishBoot() {
+  floor.placePlayerAtEntry(player);
 
-const keyboardSource = wireKeyboardInput({
-  target: window,
-  api,
-  player,
-  onMove: () => {
-    const dead = api.getComponent(player, 'Health').current <= 0;
-    // Death takes priority over descent - checked first, but still render
-    // the actual final frame before overlaying either placeholder screen,
-    // rather than freezing on the previous turn's stale canvas.
-    const outcome = dead ? null : floor.checkForDescent(player);
-    if (outcome === 'descended') renderer.resetZone();
+  const renderer = createRenderer(document.getElementById('game'));
 
-    renderer.render(api, player, floor.getZone());
+  // engine.locked itself isn't part of the serialized DTO either (it's
+  // transient UI-wait state, not simulation state) - run() re-derives it
+  // correctly either way: on a genuine cold start it locks waiting for the
+  // player's first move, on a restore it fast-forwards any actors whose turn
+  // was already due (none, in practice - a snapshot only ever happens while
+  // already locked waiting for the player) and re-locks the same way.
+  api.run();
+  renderer.render(api, player, floor.getZone());
 
-    if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
-    else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
-  },
-});
+  keyboardSource = wireKeyboardInput({
+    target: window,
+    api,
+    player,
+    onMove: () => {
+      const dead = api.getComponent(player, 'Health').current <= 0;
+      // Death takes priority over descent - checked first, but still render
+      // the actual final frame before overlaying either placeholder screen,
+      // rather than freezing on the previous turn's stale canvas.
+      const outcome = dead ? null : floor.checkForDescent(player);
+      if (outcome === 'descended') renderer.resetZone();
+
+      renderer.render(api, player, floor.getZone());
+
+      if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
+      else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
+    },
+  });
+}
+
+if (restored) {
+  finishBoot();
+} else {
+  runLoadoutScreen({ api, player, container: document.getElementById('game'), onComplete: finishBoot });
+}
 
 const editorInstance = mountEditor(document.getElementById('editor-root'), api);
 
@@ -120,7 +143,7 @@ import.meta.hot?.accept();
 // the player multiple cells per keypress) all have to happen from this one
 // combined callback.
 import.meta.hot?.dispose(async () => {
-  keyboardSource.stop();
+  keyboardSource?.stop();
   unmount(editorInstance);
   await snapshotWorld(api, hotReloadStorage, HOT_RELOAD_KEY);
 });

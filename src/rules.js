@@ -50,9 +50,12 @@ export function registerMoveRule(api) {
 }
 
 // Combat (DESIGN.md's Combat section): accuracy/evasion check plus a
-// weapon min-max damage roll, both against a seeded RNG. No equipment
-// system exists yet (Phase 3), so every attacker uses this same fixed
-// baseline "weapon" regardless of who's swinging.
+// weapon min-max damage roll, both against a seeded RNG. WEAPON_MIN_DAMAGE/
+// MAX_DAMAGE stay exported as the baseline "unarmed" roll - equipment.js's
+// EquipItem rule writes a per-entity WeaponDamage component that overrides
+// this below, once the player has a weapon equipped (Phase 3). No enemy
+// ever carries WeaponDamage, so every enemy attack still rolls this same
+// fixed baseline, unchanged.
 export const HIT_CHANCE = 0.8;
 export const WEAPON_MIN_DAMAGE = 1;
 export const WEAPON_MAX_DAMAGE = 4;
@@ -111,7 +114,8 @@ export function createAttackRule() {
     if (ctx.rng.next() >= hitChance) return undefined; // miss
 
     const attack = ctx.getComponent(attacker, 'Attack')?.value ?? 0;
-    const roll = WEAPON_MIN_DAMAGE + Math.floor(ctx.rng.next() * (WEAPON_MAX_DAMAGE - WEAPON_MIN_DAMAGE + 1));
+    const weaponDamage = ctx.getComponent(attacker, 'WeaponDamage') ?? { min: WEAPON_MIN_DAMAGE, max: WEAPON_MAX_DAMAGE };
+    const roll = weaponDamage.min + Math.floor(ctx.rng.next() * (weaponDamage.max - weaponDamage.min + 1));
     const enrageDamage = enraged ? BOSS_ENRAGE_DAMAGE_BONUS : 0;
     const damage = Math.max(1, roll + attack + enrageDamage - defense);
 

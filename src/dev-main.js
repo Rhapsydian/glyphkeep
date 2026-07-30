@@ -13,6 +13,7 @@ import {
   PLAYER_ATTACK,
   PLAYER_DEFENSE,
 } from './rules.js';
+import { registerEquipmentRules } from './equipment.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
 import { showWinScreen, showDeathScreen } from './screens.js';
@@ -45,6 +46,7 @@ registerMoveRule(api);
 registerAttackRule(api);
 registerDieRule(api);
 registerPassFallbackRule(api);
+registerEquipmentRules(api);
 
 // floor.js's own currentFloor/zone bookkeeping is plain JS-closure state,
 // not part of the save DTO's game slice (this harness doesn't wire
@@ -67,6 +69,8 @@ const player = restored
       api.addComponent(entity, 'Health', { current: PLAYER_HEALTH, max: PLAYER_HEALTH });
       api.addComponent(entity, 'Attack', { value: PLAYER_ATTACK });
       api.addComponent(entity, 'Defense', { value: PLAYER_DEFENSE });
+      api.addComponent(entity, 'Equipment', { weaponId: null, armorId: null });
+      api.addComponent(entity, 'Inventory', { itemIds: [] });
       api.addActor(entity, 0);
       return entity;
     })();

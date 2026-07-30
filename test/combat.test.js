@@ -120,6 +120,18 @@ test('an enraged Boss deals bonus damage on top of the normal roll', () => {
   assert.equal(api.getComponent(target, 'Health').current, 5 - (WEAPON_MIN_DAMAGE + BOSS_ENRAGE_DAMAGE_BONUS));
 });
 
+test('an attacker with a WeaponDamage component rolls within that range instead of the module baseline (Phase 3 equipment hookup)', () => {
+  const { api, attacker, target } = buildCombatants([0, 0]); // hit, minimum roll
+  api.addComponent(attacker, 'WeaponDamage', { min: 10, max: 12 });
+  api.addComponent(target, 'Health', { current: 20, max: 20 }); // enough to survive the hit
+
+  api.dispatch({ type: 'Attack', entity: attacker, target });
+
+  // A min roll of 10 (not WEAPON_MIN_DAMAGE's 1) proves the component
+  // overrode the baseline rather than just being ignored.
+  assert.equal(api.getComponent(target, 'Health').current, 20 - 10);
+});
+
 test('a non-Boss entity never gets the enrage bonus, however low its health', () => {
   const { api, attacker, target } = buildCombatants([HIT_CHANCE]); // would only hit with the enrage bonus
   api.addComponent(attacker, 'Health', { current: 1, max: 40 }); // no Boss component

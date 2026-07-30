@@ -10,6 +10,7 @@ import {
   PLAYER_ATTACK,
   PLAYER_DEFENSE,
 } from './rules.js';
+import { registerEquipmentRules } from './equipment.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
 import { showWinScreen, showDeathScreen } from './screens.js';
@@ -28,6 +29,7 @@ registerMoveRule(api);
 registerAttackRule(api);
 registerDieRule(api);
 registerPassFallbackRule(api);
+registerEquipmentRules(api);
 
 floor = createFloorState(api);
 
@@ -36,6 +38,8 @@ api.addComponent(player, 'PlayerControlled', {});
 api.addComponent(player, 'Health', { current: PLAYER_HEALTH, max: PLAYER_HEALTH });
 api.addComponent(player, 'Attack', { value: PLAYER_ATTACK });
 api.addComponent(player, 'Defense', { value: PLAYER_DEFENSE });
+api.addComponent(player, 'Equipment', { weaponId: null, armorId: null });
+api.addComponent(player, 'Inventory', { itemIds: [] });
 api.addActor(player, 0);
 floor.placePlayerAtEntry(player);
 

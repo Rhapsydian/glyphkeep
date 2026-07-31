@@ -11,18 +11,25 @@ it. Full design: [`DESIGN.md`](DESIGN.md).
 
 ## Status
 
-Phase 1 ("scaffold + core loop") and Phase 2 ("full bestiary + boss") are
-both complete. Floors 1-10 generate for real (BSP), the player moves and
-fights with real keyboard input, and the bestiary is fully populated with
-undead-skewing depth-gated distribution: rat, goblin, bandit, mouse,
-skeleton, and wraith (one per first-party AI behavior, `Defense` doubling
-as evasion), plus three combo enemies (slime, bandit lookout, ghost)
-combining two behaviors each via priority-tuned `dispatchExclusive`.
-Reaching floor 10 places Duke Glyphmund, a real final boss (`Guards`
-movement plus a bespoke enrage phase past half health) — defeating him
-wins the run; dying shows a placeholder death screen either way. Next up:
-Phase 3 (equipment & inventory) — see [`BACKLOG.md`](BACKLOG.md) for the
-full sequencing and the phased build plan.
+Phases 1-3 are complete. Floors 1-10 generate for real (BSP), the player
+moves and fights with real keyboard input, and the bestiary is fully
+populated with undead-skewing depth-gated distribution: rat, goblin,
+bandit, mouse, skeleton, and wraith (one per first-party AI behavior,
+`Defense` doubling as evasion), plus three combo enemies (slime, bandit
+lookout, ghost) combining two behaviors each via priority-tuned
+`dispatchExclusive`. Reaching floor 10 places Duke Glyphmund, a real final
+boss (`Guards` movement plus a bespoke enrage phase past half health) —
+defeating him wins the run; dying shows a placeholder death screen either
+way.
+
+Equipment is real: a floor-0 loadout screen rolls 5 starting items and
+lets the player pick 2, and a mid-run inventory screen (`I` key) lets them
+equip/unequip a weapon and armor slot, both modifying `Attack`/`Defense`/
+weapon-damage-roll directly. No walkable floor-0 hub zone yet (that's
+Phase 5/6, once it has real fixtures to show) — the loadout screen is a
+pure UI overlay at game start. Next up: Phase 4 (meta-progression &
+persistence) — see [`BACKLOG.md`](BACKLOG.md) for the full sequencing and
+the phased build plan.
 
 ## Getting started
 
@@ -57,12 +64,23 @@ back to real semver ranges at the next natural publish checkpoint.
 - `src/game.js` — the live camera/FOV/render loop tying ECS world state to
   the drawn canvas.
 - `src/rules.js` — glyphkeep-authored action rules: `Move` (bump-to-attack
-  resolution), `Attack` (accuracy/damage rolls), `Die`. No first-party
-  rule for any of these exists in `glyphrogue`.
+  resolution), `Attack` (accuracy/damage rolls, reading a per-attacker
+  `WeaponDamage` override when equipped), `Die`. No first-party rule for
+  any of these exists in `glyphrogue`.
 - `src/floor.js` — floor-sequencing state (current floor, descent) —
   `glyphrogue` has no "current zone" concept, so this is entirely
   game-owned.
-- `src/input.js` — keyboard-to-movement wiring via `@glyphrogue/input`.
+- `src/items.js` — the item catalog (weapon/armor, flat stat modifiers).
+- `src/equipment.js` — `Equipment`/`Inventory`/`WeaponDamage` components
+  and the `EquipItem`/`UnequipItem` rules.
+- `src/loadout.js` — the floor-0 loadout roll (sample-without-replacement
+  against the seeded rng).
+- `src/loadoutScreen.js` / `src/inventoryScreen.js` — the two real
+  screens built on `glyphrogue`'s `registerScreen`+`openScreen`/
+  `closeScreen` mechanism.
+- `src/input.js` — keyboard-to-movement wiring via `@glyphrogue/input`,
+  plus the `I` inventory keybind and the capture stack that gates
+  movement while a screen is open.
 - `src/screens.js` — placeholder win/death overlays.
 - `assets/fonts/` — font sources for the game's glyph tileset.
 

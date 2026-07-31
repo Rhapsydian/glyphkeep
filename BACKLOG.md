@@ -8,15 +8,55 @@ Phase 2 ("full bestiary + boss") is complete as of this session (session
 5, 2026-07-28) — see the "Implementation phasing" entry below for what
 landed each phase.
 
-**Now Phase 3: Equipment & inventory** — the floor-0 loadout screen, the
-real inventory/equipment screen. Phase-end review (below) found **no
-dedicated `glyphrogue` session is needed before starting** — every
-cross-project item found during Phase 2 is either already fixed live, or
-deliberately waiting for more evidence rather than being designed off one
-data point, same posture as every other design call in this project's
-history. Kickoff research should still re-verify any `glyphrogue`
-primitives Phase 3 needs against real current code, same as every prior
-phase's kickoff.
+Phase 3 ("Equipment & inventory") is complete as of this session (session
+6, 2026-07-31) — see the "Implementation phasing" entry below.
+
+**Now Phase 4: Meta-progression & persistence** — essence, the two save
+tiers (meta-progression slice + in-progress run), the real death/run-
+summary screen. `DESIGN.md`: "core game complete here." Phase-end review
+(below) found **no dedicated `glyphrogue` session is needed before
+starting** — this phase's one real cross-project item (the `spend()`
+guard gap) was already fixed live, same posture as every prior phase.
+Kickoff research should still re-verify any `glyphrogue` primitives
+Phase 4 needs (`packages/core/src/storage.js`'s two backends especially)
+against real current code, same as every prior phase's kickoff.
+
+**Phase 3 close-out / phase-end review (session 6, 2026-07-31)**: three
+checkpoints — item catalog + equipment rules + weapon-roll hookup
+(headless); the floor-0 loadout screen; the mid-run inventory/equipment
+screen. Full writeup: `docs/session-logs/session-6-2026-07-31.md`. Per
+`.claude/dev-session.md`'s phase-end ritual:
+
+- The one real cross-project item this phase (`scheduler.js`'s `spend()`
+  guard gap, found wiring checkpoint 2's `closeScreen` call) was small
+  and unambiguous — already fixed live in `glyphrogue`, logged above in
+  this file's cross-project section.
+- **Equipment/inventory rules stay glyphkeep-side, not a plugin
+  candidate** — same posture as combat (`Move`/`Attack`/`Die`): DESIGN.md
+  already establishes "no built-in combat system exists anywhere in
+  `glyphrogue`," and equipment's stat-modifier formulas are exactly that
+  same class of game-authored content on top of the generic ECS/dispatch
+  primitives, not something the engine should own.
+- **The registerScreen/openScreen/closeScreen manual-wiring pattern is
+  not a `glyphrogue` gap**, confirmed directly against the engine's own
+  docs by this phase's background review agents: `ui-and-input.md` and
+  `api.js`'s own comment both explicitly name "a player pressing a key to
+  open inventory" as the canonical case for the *lighter* shortcut
+  (skip `PendingUI`, drive the capture stack directly) — this project
+  deliberately chose the heavier mechanism anyway (decision 4, for
+  uniformity with a future core-triggered screen open), so the resulting
+  manual `captureStack` + `openScreen`/`closeScreen` dual bookkeeping is
+  self-inflicted by that choice, not something `glyphrogue` imposes.
+- **Minor glyphkeep-internal follow-up, not a cross-project item**:
+  `loadoutScreen.js` and `inventoryScreen.js` share near-identical
+  DOM-overlay-construction boilerplate (`cssText`, mount/unmount).
+  Worth extracting into a shared helper if a third screen shows up
+  (Phase 6 adds several), not urgent now.
+
+The GitHub remote ([Rhapsydian/glyphkeep](https://github.com/Rhapsydian/glyphkeep))
+exists, is pushed, and has Pages source set to GitHub Actions — the
+deploy pipeline is wired (`deploy-pages.yml` landed in Phase 1 checkpoint
+1) and activates on push to `main`.
 
 **Phase 2 close-out / phase-end review (session 5, 2026-07-28)**: three
 checkpoints — solo bestiary (rat/goblin/bandit/mouse/skeleton/wraith,
@@ -82,7 +122,16 @@ uses.
    Duke Glyphmund (`Guards` movement + a bespoke enrage bump folded into
    the shared `Attack` rule, summons cut and deferred). See the phase-end
    review above for what did/didn't get promoted upstream.
-3. **Equipment & inventory** — not started.
+3. **Equipment & inventory** — done (session 6, 2026-07-31). Three
+   checkpoints: item catalog + `Equipment`/`Inventory`/`WeaponDamage`
+   components + `EquipItem`/`UnequipItem` rules + the weapon-roll hookup
+   in `attackRule` (headless); the floor-0 loadout screen (pure UI, no
+   walkable hub zone this phase — resolved live); the mid-run
+   inventory/equipment screen (`I` keybind). Both screens use
+   `glyphrogue`'s full `registerScreen`+`openScreen`/`closeScreen`
+   mechanism rather than the lighter UI-initiated shortcut, a deliberate
+   choice for uniformity with a future core-triggered screen open. See
+   the phase-end review above for what did/didn't get promoted upstream.
 4. **Meta-progression & persistence** — not started. *(Core game complete
    at the end of this phase.)*
 5. **Event rooms & family NPCs** — not started.

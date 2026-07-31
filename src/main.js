@@ -12,6 +12,7 @@ import {
 } from './rules.js';
 import { registerEquipmentRules } from './equipment.js';
 import { registerLoadoutScreen, runLoadoutScreen } from './loadoutScreen.js';
+import { registerInventoryScreen, openInventoryScreen } from './inventoryScreen.js';
 import { wireKeyboardInput } from './input.js';
 import { createFloorState } from './floor.js';
 import { showWinScreen, showDeathScreen } from './screens.js';
@@ -32,6 +33,7 @@ registerDieRule(api);
 registerPassFallbackRule(api);
 registerEquipmentRules(api);
 registerLoadoutScreen(api);
+registerInventoryScreen(api);
 
 floor = createFloorState(api);
 
@@ -59,7 +61,7 @@ function finishBoot() {
   api.run();
   renderer.render(api, player, floor.getZone());
 
-  wireKeyboardInput({
+  const { captureStack } = wireKeyboardInput({
     target: window,
     api,
     player,
@@ -75,6 +77,9 @@ function finishBoot() {
 
       if (dead) showDeathScreen(document.getElementById('game'), floor.getCurrentFloor());
       else if (floor.isBossDefeated()) showWinScreen(document.getElementById('game'));
+    },
+    onOpenInventory: () => {
+      openInventoryScreen({ api, player, container: document.getElementById('game'), captureStack });
     },
   });
 }

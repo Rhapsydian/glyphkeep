@@ -19,13 +19,18 @@ export function createGameKeymap() {
     'move-south': [{ device: 'key', code: 'ArrowDown' }, { device: 'key', code: 'KeyS' }],
     'move-east': [{ device: 'key', code: 'ArrowRight' }, { device: 'key', code: 'KeyD' }],
     'move-west': [{ device: 'key', code: 'ArrowLeft' }, { device: 'key', code: 'KeyA' }],
+    'open-inventory': [{ device: 'key', code: 'KeyI' }],
   });
 }
 
-// No screens exist yet to push onto the capture stack (Phase 1 has no
-// pause/inventory/menu screens) - kept wired now so a later phase's screen
-// just pushes an id, rather than input.js growing a capture concept then.
-export function wireKeyboardInput({ target, api, player, onMove }) {
+// Phase 3 checkpoint 3: the capture stack (previously wired but unused,
+// per the old version of this comment) now has a real consumer -
+// inventoryScreen.js pushes/pops it directly around openScreen/closeScreen,
+// which never touch the capture stack themselves (it's @glyphrogue/input-
+// owned, entirely separate from core's PendingUI lock/unlock). Returned
+// alongside stop() so a screen opened from outside this module can share
+// the exact instance every keypress is gated through.
+export function wireKeyboardInput({ target, api, player, onMove, onOpenInventory }) {
   const captureStack = createCaptureStack();
 
   const pipeline = createInputPipeline({
@@ -33,6 +38,12 @@ export function wireKeyboardInput({ target, api, player, onMove }) {
     onCaptured: () => {},
     onFallthrough: ({ action, phase }) => {
       if (phase !== 'press') return;
+
+      if (action === 'open-inventory') {
+        onOpenInventory?.();
+        return;
+      }
+
       const direction = MOVE_DIRECTIONS[action];
       if (!direction) return;
 
@@ -45,5 +56,6 @@ export function wireKeyboardInput({ target, api, player, onMove }) {
     },
   });
 
-  return createKeyboardSource({ target, keymap: createGameKeymap(), dispatch: pipeline.handleInputAction });
+  const keyboardSource = createKeyboardSource({ target, keymap: createGameKeymap(), dispatch: pipeline.handleInputAction });
+  return { stop: keyboardSource.stop, captureStack };
 }

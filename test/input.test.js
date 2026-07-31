@@ -81,3 +81,38 @@ test('an unbound key is a no-op', () => {
   assert.deepEqual(api.getComponent(player, 'Position'), { x: 5, y: 5 });
   assert.equal(renderCount, 0);
 });
+
+test('pressing I invokes onOpenInventory instead of moving', () => {
+  const api = buildApi();
+  const player = api.createEntity();
+  api.addComponent(player, 'Position', { x: 5, y: 5 });
+  api.addComponent(player, 'PlayerControlled', {});
+  api.addActor(player, 0);
+  api.run();
+
+  const target = createFakeTarget();
+  let opened = 0;
+  wireKeyboardInput({ target, api, player, onMove: () => {}, onOpenInventory: () => opened++ });
+
+  target.fireKeyDown('KeyI');
+
+  assert.equal(opened, 1);
+  assert.deepEqual(api.getComponent(player, 'Position'), { x: 5, y: 5 });
+});
+
+test('a non-empty capture stack blocks movement fallthrough (e.g. a screen is open)', () => {
+  const api = buildApi();
+  const player = api.createEntity();
+  api.addComponent(player, 'Position', { x: 5, y: 5 });
+  api.addComponent(player, 'PlayerControlled', {});
+  api.addActor(player, 0);
+  api.run();
+
+  const target = createFakeTarget();
+  const { captureStack } = wireKeyboardInput({ target, api, player, onMove: () => {} });
+
+  captureStack.push('inventory');
+  target.fireKeyDown('ArrowUp');
+
+  assert.deepEqual(api.getComponent(player, 'Position'), { x: 5, y: 5 });
+});
